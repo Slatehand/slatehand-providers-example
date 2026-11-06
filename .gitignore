@@ -1,0 +1,17 @@
+__pycache__/
+*.py[codz]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.demucs-venv/
+# 运行时状态、Token、Whisper 模型（见 README）
+var/
+tmp/
+wip/
+# 本机部署配置
+*.local.env
+.DS_Store
+._*

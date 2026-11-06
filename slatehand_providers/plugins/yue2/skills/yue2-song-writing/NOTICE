@@ -1,0 +1,13 @@
+yue2-song-writing 改写自 YuE2 官方 Agent Skill `skills/yue2-music/`：
+https://github.com/multimodal-art-projection/YuE/tree/1116bea76032bee5668e5f097294d082fa0b84f0/skills/yue2-music
+
+Copyright (c) 2026 the YuE2 authors. 上游 Skill 以 Apache License 2.0 发布，协议全文见同目录 LICENSE（按上游原样保留）。
+
+Slatehand 的修改：
+- SKILL.md 由 Slatehand 用中文重新编写，只保留上游 `SKILL.md` 与 `references/generation-and-covers.md` 中
+  风格描述与分段歌词的写法要点；
+- 删除上游的本地安装、`scripts/` 运行、ABC 乐谱编辑、SheetSage2 翻唱、MERT2 分析、听感对比与 benchmark 流程，
+  因为 Slatehand Playground 只提交风格描述、歌词与 seed；
+- 增加 Playground 参数映射、能力边界、长度与截断说明、纯音乐写法和汇报规则；
+- 风格描述示例原样取自上游 `assets/prompt.json` 的 `style`；
+- 不包含上游 `instrumental/`（MIT）子 Skill 的文件或文字。

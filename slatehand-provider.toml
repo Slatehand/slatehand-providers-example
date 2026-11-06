@@ -1,0 +1,6 @@
+# Slatehand Core 用 `--provider-dir <本目录>` 加载这个 Provider 目录。
+name = "example"
+factory = "slatehand_providers.bundle:create_bundle"
+python-path = ["."]
+# Core 侧插件只用标准库与 Core 的 Provider SDK，不需要额外安装。
+requires = []

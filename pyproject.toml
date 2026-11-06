@@ -1,0 +1,39 @@
+[project]
+name = "slatehand-providers-example"
+version = "0.1.0"
+description = "Slatehand 作者默认部署的 Provider 实现：Core 侧插件、bundle 与 Mac / Windows 模型服务"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = ["slatehand"]
+
+[project.optional-dependencies]
+services = ["pillow>=10,<13", "numpy>=1.26,<3"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["slatehand_providers*", "default_model_providers_implement*"]
+
+[tool.setuptools.package-data]
+"slatehand_providers.plugins.minimax_h3" = ["skills/*/SKILL.md", "skills/*/LICENSE", "skills/*/NOTICE", "skills/*/references/*.md", "skills/*/references/*.txt", "skills/*/agents/*.yaml"]
+"slatehand_providers.plugins.qwen_image" = ["skills/*/SKILL.md", "skills/*/LICENSE", "skills/*/NOTICE", "skills/*/references/*.txt", "skills/*/agents/*.yaml"]
+"slatehand_providers.plugins.yue2" = ["skills/*/SKILL.md", "skills/*/LICENSE", "skills/*/NOTICE", "skills/*/references/*.md", "skills/*/references/*.txt"]
+
+[tool.pytest.ini_options]
+addopts = "-q -m 'not slow'"
+testpaths = ["provider_tests"]
+markers = [
+    "oracle: 真实驱动系统、断言可达状态的 oracle 场景（见 Slatehand Core 的 tests/README.md）",
+    "slow: 默认跳过的重测试；scripts/check.sh --full 全跑",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# 第三方原样文件不按本仓库风格改写（见 THIRD_PARTY_NOTICES.md）。
+extend-exclude = ["wip", "default_model_providers_implement/yue2_instrumental"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

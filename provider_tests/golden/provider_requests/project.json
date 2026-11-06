@@ -1,0 +1,1098 @@
+[
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "年轻、克制、语速偏慢",
+      "reference_transcript": null,
+      "seed": 7,
+      "text": "还会来吗？",
+      "voice": null
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "character.voice_design"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "克制、温和、纪录片式表达",
+      "reference_transcript": null,
+      "seed": 11,
+      "text": "站台很安静。",
+      "voice": null
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "narrator.voice_design"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "Calm, warm documentary narrator.",
+      "reference_transcript": null,
+      "seed": 12,
+      "text": "The platform is quiet.",
+      "voice": null
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "narrator.voice_design"
+  },
+  {
+    "body": {
+      "aspect_ratio": "2:1",
+      "instruction": "固定画幅：2:1 横构图；以 4K 超高分辨率（4096×2048）输出，细节清晰锐利。\n主体「小满」：短发，蓝色外套，一直带着红色行李箱\n本次造型「冬装」：蓝色外套，红色行李箱\n\n设定图硬约束：\n- 画面主体只有一个，就是上方描述的对象。严格按描述的物种、身体结构、肢体数量与比例绘制；描述的是动物、昆虫、怪物或其它非人生物时，按真实生物绘制，不得画成人、人形或拟人化形象，不得添加描述中没有的人体、人脸或衣服；\n- 柔和的中性浅灰色（约 #BEBEBE）无缝背景，不用纯白；主体曝光正常，白色或浅色衣物、皮肤与毛发的亮部保留纹理细节，不过曝；只画主体本身，不画巢穴、蛛网、栖木、地面或任何所处环境，即使描述中提到；不出现文字、标注、色卡、水印或边框；\n- 画面左侧约四分之三：同一主体的四个视角等间距并排、同一比例，依次为正面、正侧面、背面，以及最能展示整体形态的第四个角度（直立的人形取四分之三侧面，伏地、爬行或多足生物取正上方俯视）；每个视角都是主体自然放松的静止姿态，完整不出画；\n- 画面右侧约四分之一：主体头部的正面特写，清晰呈现最能辨认身份的特征；\n- 所有视角中的外观、体型、颜色、花纹与附属物完全一致；均匀柔和的影棚平光，不加戏剧化光影、动作或特效。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "upload:小满服装参考.png",
+            "bytes": 37,
+            "sha256": "b8c07d62fe56ab1ac3ded556e7ff0ad8bd694589cdbb384a933dffc1fac48501"
+          }
+        }
+      ],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/codex/image-generations",
+    "plugin": "codex",
+    "step": "character.look_sheet"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": null,
+      "reference_transcript": "旁白参考音频的完整文字稿。",
+      "seed": 101,
+      "text": "末班车到来以前，站台仍旧保持着漫长的安静。",
+      "voice": {
+        "base64": {
+          "blob": "upload:旁白参考音色.wav",
+          "bytes": 32044,
+          "sha256": "cef3121dc8da9e0ee232a9f29a96a53a3ebd9dc20d9aa427a208a4dff5b46ec1"
+        },
+        "media_type": "audio/wav"
+      }
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "narration.tts"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "Slow and calm, with a short pause after 'arrives'.",
+      "reference_transcript": "旁白参考音频的完整文字稿。",
+      "seed": 202,
+      "text": "Before the last train arrives, the platform stays quiet.",
+      "voice": {
+        "base64": {
+          "blob": "upload:旁白参考音色.wav",
+          "bytes": 32044,
+          "sha256": "cef3121dc8da9e0ee232a9f29a96a53a3ebd9dc20d9aa427a208a4dff5b46ec1"
+        },
+        "media_type": "audio/wav"
+      }
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "narration.tts"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": null,
+      "reference_transcript": "旁白参考音频的完整文字稿。",
+      "seed": 102,
+      "text": "末班车到来以前，站台仍旧保持着漫长的安静。",
+      "voice": {
+        "base64": {
+          "blob": "upload:旁白参考音色.wav",
+          "bytes": 32044,
+          "sha256": "cef3121dc8da9e0ee232a9f29a96a53a3ebd9dc20d9aa427a208a4dff5b46ec1"
+        },
+        "media_type": "audio/wav"
+      }
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "narration.regenerate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "小满站在站台右侧，握着红色行李箱拉杆抬头。\n\n项目固定画幅：16:9。关键帧硬约束：只生成一张单一静态画面，不得生成分镜拼图、文字或水印；准确表现这一时刻的可见状态。输出必须保持项目画幅比例与横竖方向，不得在连续关键帧之间改变画幅。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "output:codex-1",
+            "bytes": 22,
+            "sha256": "4c34976e0ffddb00cf0bcdce5de6f23ddce1f3ab4a7e48ce608b456481b283e1"
+          }
+        },
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "upload:行李箱细节.png",
+            "bytes": 34,
+            "sha256": "67174ced0a547770b3c7012d9ab31c3a5b7d493aa8d2bf67714902d2143bfa7f"
+          }
+        }
+      ],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/codex/image-generations",
+    "plugin": "codex",
+    "step": "keyframe.generate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "小满抬头看站牌，表情迟疑。\n\n项目固定画幅：16:9。关键帧硬约束：只生成一张单一静态画面，不得生成分镜拼图、文字或水印；准确表现这一时刻的可见状态。输出必须保持项目画幅比例与横竖方向，不得在连续关键帧之间改变画幅。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "upload:小满服装参考.png",
+            "bytes": 37,
+            "sha256": "b8c07d62fe56ab1ac3ded556e7ff0ad8bd694589cdbb384a933dffc1fac48501"
+          }
+        }
+      ],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/codex/image-generations",
+    "plugin": "codex",
+    "step": "keyframe.generate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "入夜的空旷站台全景，站灯亮起。\n\n项目固定画幅：16:9。关键帧硬约束：只生成一张单一静态画面，不得生成分镜拼图、文字或水印；准确表现这一时刻的可见状态。输出必须保持项目画幅比例与横竖方向，不得在连续关键帧之间改变画幅。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/codex/image-generations",
+    "plugin": "codex",
+    "step": "keyframe.generate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "小满抬头看站牌，表情迟疑。\n\n项目固定画幅：16:9。关键帧硬约束：只生成一张单一静态画面，不得生成分镜拼图、文字或水印；准确表现这一时刻的可见状态。输出必须保持项目画幅比例与横竖方向，不得在连续关键帧之间改变画幅。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "upload:小满服装参考.png",
+            "bytes": 37,
+            "sha256": "b8c07d62fe56ab1ac3ded556e7ff0ad8bd694589cdbb384a933dffc1fac48501"
+          }
+        },
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "upload:行李箱细节.png",
+            "bytes": 34,
+            "sha256": "67174ced0a547770b3c7012d9ab31c3a5b7d493aa8d2bf67714902d2143bfa7f"
+          }
+        }
+      ],
+      "source_image": {
+        "content_type": "image/png",
+        "data_base64": {
+          "blob": "output:codex-2",
+          "bytes": 22,
+          "sha256": "e225d631df4f9186f46d909edf3b673f162acb1ead264a64c075a3c1dbcdeebb"
+        }
+      }
+    },
+    "method": "POST",
+    "path": "/codex/image-edits",
+    "plugin": "codex",
+    "step": "keyframe.generate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "小满转身望向轨道尽头，行李箱留在身侧。\n\n项目固定画幅：16:9。关键帧硬约束：只生成一张单一静态画面，不得生成分镜拼图、文字或水印；准确表现这一时刻的可见状态。输出必须保持项目画幅比例与横竖方向，不得在连续关键帧之间改变画幅。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [],
+      "source_image": {
+        "content_type": "image/png",
+        "data_base64": {
+          "blob": "output:codex-3",
+          "bytes": 22,
+          "sha256": "5e11cd0949ded07a256e6240846e5f5b8eef5580528525c79545b7e8e263f17f"
+        }
+      }
+    },
+    "method": "POST",
+    "path": "/codex/image-edits",
+    "plugin": "codex",
+    "step": "keyframe.generate"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "年轻、克制、语速偏慢",
+      "reference_transcript": null,
+      "seed": "<随机 seed：每次对白 Generation 独立分配>",
+      "text": "还会来吗？",
+      "voice": null
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "dialogue.tts"
+  },
+  {
+    "body": {
+      "additional_references": [
+        {
+          "content": {
+            "blob": "upload:站牌字样.png",
+            "bytes": 31,
+            "sha256": "c7decee248592b664311ef4fa8486461be5ee3637e4c2bb6ae30cb4108a0a982"
+          },
+          "media_type": "image/png"
+        }
+      ],
+      "audio": true,
+      "audio_references": [
+        {
+          "content": {
+            "blob": "output:breeze-7",
+            "bytes": 20044,
+            "sha256": "9e7d100263d06f093b655746417bcbc652710710ed464f909e33541bd8e24807"
+          },
+          "media_type": "audio/wav"
+        },
+        {
+          "content": {
+            "blob": "upload:站台环境声.wav",
+            "bytes": 48044,
+            "sha256": "0cbe3637aa972aa76b36a434c068eb121ed110b7a5de0d76fa0bf5a2069bbee8"
+          },
+          "media_type": "audio/wav"
+        }
+      ],
+      "direction": "subject_definitions:\n<Subject 1> 是 <Picture 1> 中的小满。\n<Subject 2> 是 <Picture 3> 中的站牌与站名字样。\n<Audio 1> 是 <Subject 1> (S1) 的对白音频。\n<Audio 2> 是站台环境底噪。\n<Video 1> 是缓慢推近的运镜参考。\nsummary:\n[keyframe completion + reference generation + audio reuse] <Subject 1> 抬头看 <Subject 2> 并轻声发问。\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): fully_preserved - 外观与服装保持一致。\n<Subject 2> (appears in [Shot 1]): fully_preserved - 站名字样保持一致。\n<Audio 1>: partially_copy - 原信号放在这句对白的时间窗内。\n<Audio 2>: partially_copy - 底噪贯穿全片。\n<Video 1> (camera movement): weak_reference - 只参考缓慢推近。\ndetailed_description:\n写实电影风格。\n[Shot 1] 镜头从 <Picture 1> 开始，参考 <Video 1> 缓慢推近。<Subject 1> (S1) 抬头看 <Subject 2>，轻声迟疑地说：<d>[Chinese] 还会来吗？</d>\noverall_soundscape:\n<Audio 2> 的站台环境底噪贯穿全片。除上述对白外无其它人类语音。\nnon_diegetic_music:\nN/A",
+      "duration_s": 2.25,
+      "first_reference": {
+        "content": {
+          "blob": "output:codex-2",
+          "bytes": 22,
+          "sha256": "e225d631df4f9186f46d909edf3b673f162acb1ead264a64c075a3c1dbcdeebb"
+        },
+        "media_type": "image/png"
+      },
+      "guidance": 1.0,
+      "height_px": 704,
+      "last_reference": {
+        "content": {
+          "blob": "output:codex-5",
+          "bytes": 22,
+          "sha256": "81204f1c100e7f23a83a6a9abad23ed191e3e7bfc8541526b214a447b31ff775"
+        },
+        "media_type": "image/png"
+      },
+      "random_seed": 1001,
+      "sage_attention": true,
+      "selflift": true,
+      "step_count": 20,
+      "video_references": [
+        {
+          "content": {
+            "blob": "upload:推镜参考.mp4",
+            "bytes": 376,
+            "sha256": "8a1449f7074aca38004f4ecf17100ef59adadf15d9096c5d5386a4f487eaf543"
+          },
+          "media_type": "video/mp4"
+        }
+      ],
+      "width_px": 1280
+    },
+    "method": "POST",
+    "path": "/minimax-h3/ref2va/renders",
+    "plugin": "h3_ref2va",
+    "step": "video.ref2va"
+  },
+  {
+    "body": {
+      "canvas": {
+        "height": 704,
+        "width": 1280
+      },
+      "closing_frame": {
+        "base64": {
+          "blob": "output:codex-6",
+          "bytes": 22,
+          "sha256": "e2245c1577933ed0673472e6c7c71b576538ec6505937e2d68b1b22efa488290"
+        },
+        "mime": "image/png"
+      },
+      "include_audio": true,
+      "opening_frame": {
+        "base64": {
+          "blob": "output:codex-3",
+          "bytes": 22,
+          "sha256": "5e11cd0949ded07a256e6240846e5f5b8eef5580528525c79545b7e8e263f17f"
+        },
+        "mime": "image/png"
+      },
+      "prompt": "小满松开拉杆，转身望向轨道尽头。",
+      "sampling": {
+        "cfg": 1.0,
+        "sage_attention": true,
+        "selflift": true,
+        "steps": 20
+      },
+      "seconds": 4.5,
+      "seed": 1002
+    },
+    "method": "POST",
+    "path": "/minimax-h3/fl2va/clips",
+    "plugin": "h3_fl2va",
+    "step": "video.fl2va"
+  },
+  {
+    "body": {
+      "canvas": {
+        "height": 704,
+        "width": 1280
+      },
+      "closing_frame": null,
+      "include_audio": true,
+      "opening_frame": {
+        "base64": {
+          "blob": "output:codex-4",
+          "bytes": 22,
+          "sha256": "eda2c6faf8cf7468921325f4d3b802de7a17fd6abf9d5b62cf4c537944b77ca9"
+        },
+        "mime": "image/png"
+      },
+      "prompt": "固定机位观察入夜站台，站灯轻微闪烁。",
+      "sampling": {
+        "cfg": 1.0,
+        "sage_attention": true,
+        "selflift": true,
+        "steps": 20
+      },
+      "seconds": 3.8,
+      "seed": "<默认 seed：narration Segment ID 前 16 位>"
+    },
+    "method": "POST",
+    "path": "/minimax-h3/fl2va/clips",
+    "plugin": "h3_fl2va",
+    "step": "video.fl2va"
+  },
+  {
+    "body": {
+      "content": {
+        "blob": "output:h3_ref2va-1",
+        "bytes": 371,
+        "sha256": "45d02fa9d427f41b99270d26f17ec7a2c21931a40c559de586320f920e2e9875"
+      },
+      "frame_index": 50
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/video_frame",
+    "plugin": "video_frame",
+    "step": "keyframe.extract_frame"
+  },
+  {
+    "body": {
+      "content": {
+        "blob": "output:h3_ref2va-1",
+        "bytes": 371,
+        "sha256": "45d02fa9d427f41b99270d26f17ec7a2c21931a40c559de586320f920e2e9875"
+      },
+      "frame_index": 0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/video_frame",
+    "plugin": "video_frame",
+    "step": "asset.video_frame"
+  },
+  {
+    "body": {
+      "max_long_side": 2560,
+      "seed": "<默认超分 seed：drama 第 1 个 Segment ID 前 16 位按 2^32 取模>",
+      "source_video": {
+        "base64": {
+          "blob": "output:h3_ref2va-1",
+          "bytes": 371,
+          "sha256": "45d02fa9d427f41b99270d26f17ec7a2c21931a40c559de586320f920e2e9875"
+        },
+        "mime": "video/mp4"
+      },
+      "target_short_side": 1080
+    },
+    "method": "POST",
+    "path": "/seedvr2/7b-sharp-fp8/upscales",
+    "plugin": "seedvr2",
+    "step": "video.upscale"
+  },
+  {
+    "body": {
+      "stem": "voice",
+      "video": {
+        "base64": {
+          "blob": "output:h3_ref2va-1",
+          "bytes": 371,
+          "sha256": "45d02fa9d427f41b99270d26f17ec7a2c21931a40c559de586320f920e2e9875"
+        },
+        "mime": "video/mp4"
+      }
+    },
+    "method": "POST",
+    "path": "/demucs/audio-separations",
+    "plugin": "demucs",
+    "step": "asset.audio_separation"
+  },
+  {
+    "body": {
+      "stem": "background",
+      "video": {
+        "base64": {
+          "blob": "output:h3_ref2va-1",
+          "bytes": 371,
+          "sha256": "45d02fa9d427f41b99270d26f17ec7a2c21931a40c559de586320f920e2e9875"
+        },
+        "mime": "video/mp4"
+      }
+    },
+    "method": "POST",
+    "path": "/demucs/audio-separations",
+    "plugin": "demucs",
+    "step": "asset.audio_separation"
+  },
+  {
+    "body": {
+      "background": {
+        "blob": "output:demucs-2",
+        "bytes": 64044,
+        "sha256": "fa7aaaf1088cf9e2b57b829b7a07b3bca5e64ab8a66f57f87be895f6b79d473a"
+      },
+      "background_gain_db": -6.0,
+      "background_gain_end_seconds": null,
+      "background_gain_start_seconds": null,
+      "video": {
+        "blob": "output:h3_ref2va-1",
+        "bytes": 371,
+        "sha256": "45d02fa9d427f41b99270d26f17ec7a2c21931a40c559de586320f920e2e9875"
+      },
+      "voice": {
+        "blob": "output:demucs-1",
+        "bytes": 64044,
+        "sha256": "4cdce1525778f8c07084e6da1b763259b6216225c53dc9d78bc3a901a1cc2645"
+      },
+      "voice_gain_db": 3.0,
+      "voice_gain_end_seconds": 4.0,
+      "voice_gain_start_seconds": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/audio_remix",
+    "plugin": "audio_remix",
+    "step": "asset.audio_remix"
+  },
+  {
+    "body": [
+      {
+        "headers": [
+          "Content-Disposition: form-data; name=\"file\"; filename=\"reference.wav\"",
+          "Content-Type: audio/wav"
+        ],
+        "value": {
+          "blob": "upload:小满对白.wav",
+          "bytes": 24044,
+          "sha256": "fe375a38de8cea3b1e50e9752198b65b08c6e2d57fef77fc3a0b9e91b8785ae4"
+        }
+      },
+      {
+        "headers": [
+          "Content-Disposition: form-data; name=\"response_format\""
+        ],
+        "value": "json"
+      },
+      {
+        "headers": [
+          "Content-Disposition: form-data; name=\"language\""
+        ],
+        "value": "zh"
+      },
+      {
+        "headers": [
+          "Content-Disposition: form-data; name=\"translate\""
+        ],
+        "value": "false"
+      },
+      {
+        "headers": [
+          "Content-Disposition: form-data; name=\"no_timestamps\""
+        ],
+        "value": "true"
+      },
+      {
+        "headers": [
+          "Content-Disposition: form-data; name=\"temperature\""
+        ],
+        "value": "0.0"
+      }
+    ],
+    "method": "POST",
+    "path": "/inference",
+    "plugin": "whisper",
+    "step": "asset.transcription"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "车站广播女声，略带回声",
+      "reference_transcript": null,
+      "seed": 21,
+      "text": "列车即将进站，请站在黄线以内。",
+      "voice": null
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "asset.audio_generation"
+  },
+  {
+    "body": {
+      "cfg_scale": 4.0,
+      "instruction": "低声，带一点失望",
+      "reference_transcript": "还会来吗？",
+      "seed": 22,
+      "text": "末班车已经停运了。",
+      "voice": {
+        "base64": {
+          "blob": "upload:小满对白.wav",
+          "bytes": 24044,
+          "sha256": "fe375a38de8cea3b1e50e9752198b65b08c6e2d57fef77fc3a0b9e91b8785ae4"
+        },
+        "media_type": "audio/wav"
+      }
+    },
+    "method": "POST",
+    "path": "/breeze-tts2/speech",
+    "plugin": "breeze",
+    "step": "asset.audio_generation"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:codex-2",
+            "bytes": 22,
+            "sha256": "e225d631df4f9186f46d909edf3b673f162acb1ead264a64c075a3c1dbcdeebb"
+          },
+          "duration_seconds": 1.125,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:codex-5",
+            "bytes": 22,
+            "sha256": "81204f1c100e7f23a83a6a9abad23ed191e3e7bfc8541526b214a447b31ff775"
+          },
+          "duration_seconds": 1.125,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:codex-3",
+            "bytes": 22,
+            "sha256": "5e11cd0949ded07a256e6240846e5f5b8eef5580528525c79545b7e8e263f17f"
+          },
+          "duration_seconds": 2.25,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:codex-6",
+            "bytes": 22,
+            "sha256": "e2245c1577933ed0673472e6c7c71b576538ec6505937e2d68b1b22efa488290"
+          },
+          "duration_seconds": 2.25,
+          "transition_from_previous": null
+        }
+      ],
+      "narrations": [],
+      "transition_seconds": 0.1
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/animatic",
+    "plugin": "animatic",
+    "step": "scene.animatic"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:seedvr2-1",
+            "bytes": 369,
+            "sha256": "04e5c0bfbb1174e8715b7e42b1672d13bb137936977ea1d84d7ca0399e7c450e"
+          },
+          "duration_seconds": 2.25,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:h3_fl2va-1",
+            "bytes": 370,
+            "sha256": "91a632aa5c25991dada59df0cf49614e830d455b443d7c9f24837aea3136d497"
+          },
+          "duration_seconds": 4.5,
+          "transition_from_previous": null
+        }
+      ],
+      "narration_audio_volume": 1.0,
+      "narrations": [],
+      "transition_seconds": 0.1,
+      "video_audio_volume": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/final_assembly",
+    "plugin": "final_assembly",
+    "step": "final.assembly"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:seedvr2-1",
+            "bytes": 369,
+            "sha256": "04e5c0bfbb1174e8715b7e42b1672d13bb137936977ea1d84d7ca0399e7c450e"
+          },
+          "duration_seconds": 2.25,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:h3_fl2va-1",
+            "bytes": 370,
+            "sha256": "91a632aa5c25991dada59df0cf49614e830d455b443d7c9f24837aea3136d497"
+          },
+          "duration_seconds": 4.5,
+          "transition_from_previous": null
+        }
+      ],
+      "narration_audio_volume": 1.0,
+      "narrations": [],
+      "transition_seconds": 0.1,
+      "video_audio_volume": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/final_assembly",
+    "plugin": "final_assembly",
+    "step": "final.assembly"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:h3_fl2va-2",
+            "bytes": 370,
+            "sha256": "28b631e6a87ec25f3d058c92bc042e0c05256037d695ae578b71cfb8b10d9597"
+          },
+          "duration_seconds": 3.8,
+          "transition_from_previous": null
+        }
+      ],
+      "narration_audio_volume": 1.0,
+      "narrations": [
+        {
+          "content": {
+            "blob": "output:breeze-4",
+            "bytes": 32844,
+            "sha256": "54c8b14601c4a0c8f6b3e88390d1fe5cd43fed8803351f26b842a2ea72feac66"
+          },
+          "start_clip_index": 0
+        }
+      ],
+      "transition_seconds": 0.1,
+      "video_audio_volume": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/final_assembly",
+    "plugin": "final_assembly",
+    "step": "final.assembly"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:h3_fl2va-2",
+            "bytes": 370,
+            "sha256": "28b631e6a87ec25f3d058c92bc042e0c05256037d695ae578b71cfb8b10d9597"
+          },
+          "duration_seconds": 3.8,
+          "transition_from_previous": null
+        }
+      ],
+      "narration_audio_volume": 1.0,
+      "narrations": [
+        {
+          "content": {
+            "blob": "output:breeze-5",
+            "bytes": 60844,
+            "sha256": "735b923a2e3a983eb63becdcf1e3eca2ad670c3b588c027fc441e24d54e8e84c"
+          },
+          "start_clip_index": 0
+        }
+      ],
+      "transition_seconds": 0.1,
+      "video_audio_volume": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/final_assembly",
+    "plugin": "final_assembly",
+    "step": "final.assembly"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:final_assembly-1",
+            "bytes": 376,
+            "sha256": "037b488504b3d871c42ba40c6fa1cf73fb65e29b5a452de5669609267c8f726e"
+          },
+          "duration_seconds": 6.75,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:final_assembly-3",
+            "bytes": 376,
+            "sha256": "af271887d69e16d3145bf12a16fe1b289d24ef18a96e738fc57361ef5a8b9b32"
+          },
+          "duration_seconds": 3.8,
+          "transition_from_previous": null
+        }
+      ],
+      "narration_audio_volume": 1.0,
+      "narrations": [],
+      "transition_seconds": 0.1,
+      "video_audio_volume": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/final_assembly",
+    "plugin": "final_assembly",
+    "step": "final.assembly"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "clips": [
+        {
+          "content": {
+            "blob": "output:final_assembly-2",
+            "bytes": 376,
+            "sha256": "8545f629df968c03972458c159899ae4d105282c67d09bfd921868dc55bb06d4"
+          },
+          "duration_seconds": 6.75,
+          "transition_from_previous": null
+        },
+        {
+          "content": {
+            "blob": "output:final_assembly-4",
+            "bytes": 376,
+            "sha256": "cb613ce0f294a6a6a509b8f9dc66d73067e6e40df3bb400abb708c9cd148235b"
+          },
+          "duration_seconds": 3.8,
+          "transition_from_previous": null
+        }
+      ],
+      "narration_audio_volume": 1.0,
+      "narrations": [],
+      "transition_seconds": 0.1,
+      "video_audio_volume": 1.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/final_assembly",
+    "plugin": "final_assembly",
+    "step": "final.assembly"
+  },
+  {
+    "body": {
+      "additional_references": [
+        {
+          "content": {
+            "blob": "upload:站牌字样.png",
+            "bytes": 31,
+            "sha256": "c7decee248592b664311ef4fa8486461be5ee3637e4c2bb6ae30cb4108a0a982"
+          },
+          "media_type": "image/png"
+        }
+      ],
+      "audio": true,
+      "audio_references": [
+        {
+          "content": {
+            "blob": "output:breeze-7",
+            "bytes": 20044,
+            "sha256": "9e7d100263d06f093b655746417bcbc652710710ed464f909e33541bd8e24807"
+          },
+          "media_type": "audio/wav"
+        },
+        {
+          "content": {
+            "blob": "upload:站台环境声.wav",
+            "bytes": 48044,
+            "sha256": "0cbe3637aa972aa76b36a434c068eb121ed110b7a5de0d76fa0bf5a2069bbee8"
+          },
+          "media_type": "audio/wav"
+        }
+      ],
+      "direction": "subject_definitions:\n<Subject 1> 是 <Picture 1> 中的小满。\n<Subject 2> 是 <Picture 3> 中的站牌与站名字样。\n<Audio 1> 是 <Subject 1> (S1) 的对白音频。\n<Audio 2> 是站台环境底噪。\n<Video 1> 是缓慢推近的运镜参考。\nsummary:\n[keyframe completion + reference generation + audio reuse] <Subject 1> 抬头看 <Subject 2> 并轻声发问。\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): fully_preserved - 外观与服装保持一致。\n<Subject 2> (appears in [Shot 1]): fully_preserved - 站名字样保持一致。\n<Audio 1>: partially_copy - 原信号放在这句对白的时间窗内。\n<Audio 2>: partially_copy - 底噪贯穿全片。\n<Video 1> (camera movement): weak_reference - 只参考缓慢推近。\ndetailed_description:\n写实电影风格。\n[Shot 1] 镜头从 <Picture 1> 开始，参考 <Video 1> 缓慢推近。<Subject 1> (S1) 抬头看 <Subject 2>，轻声迟疑地说：<d>[Chinese] 还会来吗？</d>\noverall_soundscape:\n<Audio 2> 的站台环境底噪贯穿全片。除上述对白外无其它人类语音。\nnon_diegetic_music:\nN/A",
+      "duration_s": 2.25,
+      "first_reference": {
+        "content": {
+          "blob": "output:codex-2",
+          "bytes": 22,
+          "sha256": "e225d631df4f9186f46d909edf3b673f162acb1ead264a64c075a3c1dbcdeebb"
+        },
+        "media_type": "image/png"
+      },
+      "guidance": 1.0,
+      "height_px": 1088,
+      "last_reference": {
+        "content": {
+          "blob": "output:codex-5",
+          "bytes": 22,
+          "sha256": "81204f1c100e7f23a83a6a9abad23ed191e3e7bfc8541526b214a447b31ff775"
+        },
+        "media_type": "image/png"
+      },
+      "random_seed": 2001,
+      "sage_attention": false,
+      "selflift": false,
+      "step_count": 8,
+      "video_references": [
+        {
+          "content": {
+            "blob": "upload:推镜参考.mp4",
+            "bytes": 376,
+            "sha256": "8a1449f7074aca38004f4ecf17100ef59adadf15d9096c5d5386a4f487eaf543"
+          },
+          "media_type": "video/mp4"
+        }
+      ],
+      "width_px": 1920
+    },
+    "method": "POST",
+    "path": "/minimax-h3/ref2va/renders",
+    "plugin": "h3_ref2va",
+    "step": "settings.h3_turbo_1080p"
+  },
+  {
+    "body": {
+      "canvas": {
+        "height": 1088,
+        "width": 1920
+      },
+      "closing_frame": {
+        "base64": {
+          "blob": "output:codex-6",
+          "bytes": 22,
+          "sha256": "e2245c1577933ed0673472e6c7c71b576538ec6505937e2d68b1b22efa488290"
+        },
+        "mime": "image/png"
+      },
+      "include_audio": true,
+      "opening_frame": {
+        "base64": {
+          "blob": "output:codex-3",
+          "bytes": 22,
+          "sha256": "5e11cd0949ded07a256e6240846e5f5b8eef5580528525c79545b7e8e263f17f"
+        },
+        "mime": "image/png"
+      },
+      "prompt": "小满松开拉杆，转身望向轨道尽头。",
+      "sampling": {
+        "cfg": 1.0,
+        "sage_attention": false,
+        "selflift": false,
+        "steps": 8
+      },
+      "seconds": 4.5,
+      "seed": 2002
+    },
+    "method": "POST",
+    "path": "/minimax-h3/fl2va/clips",
+    "plugin": "h3_fl2va",
+    "step": "settings.h3_turbo_1080p"
+  },
+  {
+    "body": {
+      "canvas": {
+        "height": 1088,
+        "width": 1920
+      },
+      "closing_frame": {
+        "base64": {
+          "blob": "output:codex-6",
+          "bytes": 22,
+          "sha256": "e2245c1577933ed0673472e6c7c71b576538ec6505937e2d68b1b22efa488290"
+        },
+        "mime": "image/png"
+      },
+      "include_audio": true,
+      "opening_frame": {
+        "base64": {
+          "blob": "output:codex-3",
+          "bytes": 22,
+          "sha256": "5e11cd0949ded07a256e6240846e5f5b8eef5580528525c79545b7e8e263f17f"
+        },
+        "mime": "image/png"
+      },
+      "prompt": "小满松开拉杆，转身望向轨道尽头。",
+      "sampling": {
+        "cfg": 1.0,
+        "sage_attention": false,
+        "selflift": false,
+        "steps": 8
+      },
+      "seconds": 4.5,
+      "seed": 3001
+    },
+    "method": "POST",
+    "path": "/minimax-h3/fl2va/clips",
+    "plugin": "h3_fl2va",
+    "step": "video.retry_after_failure"
+  },
+  {
+    "body": {
+      "canvas": {
+        "height": 1088,
+        "width": 1920
+      },
+      "closing_frame": {
+        "base64": {
+          "blob": "output:codex-6",
+          "bytes": 22,
+          "sha256": "e2245c1577933ed0673472e6c7c71b576538ec6505937e2d68b1b22efa488290"
+        },
+        "mime": "image/png"
+      },
+      "include_audio": true,
+      "opening_frame": {
+        "base64": {
+          "blob": "output:codex-3",
+          "bytes": 22,
+          "sha256": "5e11cd0949ded07a256e6240846e5f5b8eef5580528525c79545b7e8e263f17f"
+        },
+        "mime": "image/png"
+      },
+      "prompt": "小满松开拉杆，转身望向轨道尽头。",
+      "sampling": {
+        "cfg": 1.0,
+        "sage_attention": false,
+        "selflift": false,
+        "steps": 8
+      },
+      "seconds": 4.5,
+      "seed": 3001
+    },
+    "method": "POST",
+    "path": "/minimax-h3/fl2va/clips",
+    "plugin": "h3_fl2va",
+    "step": "video.retry_after_failure"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "小满抬头看站牌，表情迟疑。\n\n项目固定画幅：16:9。关键帧硬约束：只生成一张单一静态画面，不得生成分镜拼图、文字或水印；准确表现这一时刻的可见状态。输出必须保持项目画幅比例与横竖方向，不得在连续关键帧之间改变画幅。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [
+        {
+          "content_type": "image/png",
+          "data_base64": {
+            "blob": "upload:小满服装参考.png",
+            "bytes": 37,
+            "sha256": "b8c07d62fe56ab1ac3ded556e7ff0ad8bd694589cdbb384a933dffc1fac48501"
+          }
+        }
+      ],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/agy/image-generations",
+    "plugin": "agy",
+    "step": "settings.image_provider_agy"
+  },
+  {
+    "body": {
+      "aspect_ratio": "2:1",
+      "instruction": "老式火车站候车大厅，冬夜，暖黄灯光。\n\n固定画幅：2:1。地点全景图硬约束：生成一张 360°×180° 等距柱状投影（equirectangular）全景；左右边缘必须无缝衔接，地平线位于画面垂直正中；不得出现文字或水印。\n地点「候车大厅」：水磨石地面、木长椅、拱形高窗。\n固定陈设：\n- 时刻表：翻牌式时刻表\n主光：高窗透入的冷月光\n本图片实际内容说明目标：完整展示大厅四周、长椅、高窗与时刻表的位置关系。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/codex/image-generations",
+    "plugin": "codex",
+    "step": "location.image_generate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "instruction": "雪夜站前广场，路灯昏黄。\n\n固定画幅：16:9。地点图片硬约束：生成一张单一静态画面，不得生成拼图、文字或水印。\n地点「站前广场」：积雪广场、路灯、远处钟楼。\n本图片实际内容说明目标：广角远景，交代积雪广场、路灯与钟楼方位。",
+      "model": "gpt-5.6-terra",
+      "reference_images": [],
+      "source_image": null
+    },
+    "method": "POST",
+    "path": "/codex/image-generations",
+    "plugin": "codex",
+    "step": "location.image_generate"
+  },
+  {
+    "body": {
+      "aspect_ratio": "16:9",
+      "content": {
+        "blob": "output:codex-7",
+        "bytes": 43,
+        "sha256": "17be54d2ad3f0f9bc32df20458ec5f021ee82c386ca924ac9a156a57ee83910c"
+      },
+      "hfov_deg": 70.0,
+      "pitch_deg": -5.0,
+      "yaw_deg": 45.0
+    },
+    "method": "SUBMIT",
+    "path": "/core-tools/pano_view",
+    "plugin": "pano_view",
+    "step": "location.panorama_capture"
+  }
+]
