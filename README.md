@@ -32,7 +32,7 @@ flowchart LR
     services -->|LaunchAgent| mac
     services -->|维持 colab ssh 隧道| colab
     nodes -->|SSH 启停、控制租约心跳| win
-    nodes -->|开机、挂 Drive、安装、启动| colab
+    nodes -->|开机、安装、下载权重、启动| colab
 ```
 
 - `slatehand-provider.toml`：Core 读取的清单（bundle 名、工厂、import 路径、Core 环境需要的额外发行包）。
@@ -136,18 +136,19 @@ H3 与 Breeze TTS 2 可同时接入本地 Windows 与 Colab（G4，RTX PRO 6000 
   只在 `colab sessions` 列出该会话时才连接，避免 `colab ssh` 自动开出新的计费 VM；会话不在线时 Core 照常启动，
   只是 Colab 节点的提交会连接失败。
 - 开关节点由人手动管理，用 `scripts/colab_node.sh`（需要已安装并登录
-  [Colab CLI](https://github.com/googlecolab/google-colab-cli)）。`up` 依次开 G4、挂 Drive（终端里交互授权）、
-  同步本仓库 `default_model_providers_implement/` 与 Token，再在 VM 上运行 `colab/setup.sh` 与
+  [Colab CLI](https://github.com/googlecolab/google-colab-cli)）。`up` 依次开 G4、同步本仓库 `default_model_providers_implement/` 与 Token，再在 VM 上运行 `colab/setup.sh` 与
   `colab/run_server.sh start`；`down` 回收 VM。Core 不启停 VM、不对 Colab 维持租约。
   每台 Colab 运行时同时只允许一个 `colab ssh` 连接，Core 运行时由隧道占用，所以脚本的远程命令走 kernel 通道
   （`colab exec`）、文件走 `colab upload`，Core 开着也能开机部署；手工 `colab ssh` 调试需先停 Core。
-- 权重放在 Drive：`MyDrive/model/minimax-h3/`（与 Windows 节点同一套 DaSiWa Hybrid V2 / Turbo V2 int8、
-  官方 Pruned BF16、NVFP4 文本编码器、视频/音频 VAE 与 SelfLift 放大器）与 `MyDrive/model/breeze-tts-2/`
-  （首次部署时由 `setup.sh` 从 Hugging Face 固定 revision 下载存入），每次开机复制到 VM 本地盘后加载。
-- 开机分两段：前台只复制 Turbo V2 及其共用权重（约 43 GB）就启动服务；Breeze、Hybrid V2 与官方 BF16 在后台
-  依次复制（每个文件按 64 MB 分块多线程并行读取，绕开 Drive 挂载的单流限速），完整复制后才链接进模型目录。复制进度以 GB、速度与预计剩余时间显示，前台原地刷新，后台写入
-  `/content/slatehand-state/setup-background.log`，`scripts/colab_node.sh status` 显示最新几行。尚未搬完的模型
-  被调用时任务直接失败并提示稍后重试。
+- 权重每次开机都从固定 commit 的 Hugging Face 仓库下载到 VM 本地盘，不需要 Google Drive：与 Windows 节点
+  同一套 DaSiWa Hybrid V2 / Turbo V2 int8（`kogehek/DaSiWa_MiniMax_H3`，与 Civitai 发布的 SHA256 一致）、官方
+  Pruned BF16、NVFP4 文本编码器与视频/音频 VAE（`Comfy-Org/MiniMax-H3`）、SelfLift 放大器
+  （`LBH-123-AI/Minimax_h3_latent_Upscaler`）和 Breeze-TTS-2（`BreezeBlue/Breeze-TTS-2`）。`colab/fetch_progress.py`
+  按 64 MB 分块、16 个连接并行下载（实测约 1.5 GB/s，Drive 挂载约 0.1 GB/s）。
+- 开机分两段：前台只下载 Turbo V2 及其共用权重（约 43 GB）就启动服务；Breeze、Hybrid V2 与官方 BF16 在后台
+  依次下载，完整下载并核对大小后才链接进模型目录。进度以 GB、速度与预计剩余时间显示，本机由
+  `scripts/progress_view.py` 渲染成原地刷新的进度条；后台写入 `/content/slatehand-state/setup-background.log`，
+  `scripts/colab_node.sh status` 显示最新几行。尚未下载完的模型被调用时任务直接失败并提示稍后重试。
 
 ## Breeze-TTS-2 接入
 

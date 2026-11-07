@@ -61,8 +61,8 @@
 - `requirements-codex-image.txt`：私有图片服务依赖。
 - `macos/install_launch_agent.sh`、`macos/launch-agent.plist.template`、`macos/run_codex_server.sh`：Mac 媒体服务 LaunchAgent 安装与启动。
 - `macos/install_demucs.sh`：Demucs 独立虚拟环境安装。
-- `colab/setup.sh`：Colab VM 上安装固定 revision 的 ComfyUI 与 SelfLift、H3 依赖；前台只缓存 Turbo V2 及共用权重，后台再装 Breeze TTS 2（固定 revision、独立 venv）并缓存 Hybrid V2 与官方 BF16，均按 Windows 同名链接进 models。
-- `colab/copy_progress.py`：从 Drive 复制权重时以 GB、速度与预计剩余时间显示进度。
+- `colab/setup.sh`：Colab VM 上安装固定 revision 的 ComfyUI 与 SelfLift、H3 依赖；前台只下载 Turbo V2 及共用权重，后台再装 Breeze TTS 2（固定 revision、独立 venv）并下载 Hybrid V2 与官方 BF16；权重来自固定 commit 的 Hugging Face 仓库，均按 Windows 同名链接进 models。
+- `colab/fetch_progress.py`：从 Hugging Face 多连接分块下载权重，以 GB、速度与预计剩余时间显示进度。
 - `colab/run_server.sh`：Colab VM 上启停只含 H3 与 Breeze 的模型服务（回环地址 + Bearer Token）；VM 由 `scripts/colab_node.sh` 手动开关。
 - `windows/install_scheduled_task.ps1`、`uninstall_scheduled_task.ps1`：Windows 计划任务安装与卸载。
 - `windows/run_server.ps1`：Windows 服务启动。
@@ -80,4 +80,4 @@
 - `scripts/ref2va_acceptance.py`、`scripts/seedvr2_upscale_acceptance.py`：真实媒体服务验收。
 - `scripts/windows_node.sh`、`scripts/node_heartbeat.py`：手动启动 Windows 节点（经 SSH 运行仓库内固定脚本）后在前台持续维持控制租约；Ctrl-C 或关闭终端即释放，Windows 服务随租约丢失自行退出。
 - `scripts/progress_view.py`：`colab_node.sh` 的显示过滤器，把复制进度行渲染成原地刷新的进度条。
-- `scripts/colab_node.sh`：手动开关 Colab 节点（开 G4、交互挂 Drive、同步代码与 Token、安装并启动服务后持续显示后台搬运进度；status；down 回收 VM）。远程命令走 `colab exec`，不与 Core 的隧道争用唯一的 `colab ssh` 连接。
+- `scripts/colab_node.sh`：手动开关 Colab 节点（开 G4、同步代码与 Token、安装并启动服务后持续显示后台下载进度；status；down 回收 VM）。远程命令走 `colab exec`，不与 Core 的隧道争用唯一的 `colab ssh` 连接。

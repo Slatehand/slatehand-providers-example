@@ -85,8 +85,8 @@ LAN 模式仍强制 Bearer Token。
 ### Colab 节点
 
 同一服务也可以在 Colab VM（Linux）上只启用 `h3_fl2va,h3_ref2va,breeze_tts_2`：`colab/setup.sh` 安装与 Windows
-相同 revision 的 ComfyUI / comfyui-SelfLift 和 `sageattention==1.0.6`（保留 Colab 自带的 CUDA 版 torch），把 Drive
-中的权重复制到本地盘，并按 Windows 节点相同的相对路径链接进 `ComfyUI/models`；Breeze TTS 2 使用上游
+相同 revision 的 ComfyUI / comfyui-SelfLift 和 `sageattention==1.0.6`（保留 Colab 自带的 CUDA 版 torch），从固定 commit
+的 Hugging Face 仓库多连接下载权重到本地盘，并按 Windows 节点相同的相对路径链接进 `ComfyUI/models`；Breeze TTS 2 使用上游
 `breezeblue-ai/breeze-tts` 固定 revision 与独立的 Python 3.12 venv（依赖按其 `requirements.txt`），worker 在 Linux
 上直接以独立进程组启动 `breeze_infer.api --fast-all`，不经 WSL。`colab/run_server.sh` 以独立进程组在
 `127.0.0.1:8791` 启动服务，Token 来自 `/root/.slatehand-colab-token`。固定图里带子目录的模型名按宿主系统的

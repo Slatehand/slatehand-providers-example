@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""把 copy_progress.py 的进度行渲染成原地刷新的进度条（scripts/colab_node.sh 的显示过滤器）。
+"""把 fetch_progress.py 的进度行渲染成原地刷新的进度条（scripts/colab_node.sh 的显示过滤器）。
 
 识别形如 ``HH:MM:SS <阶段> 12.3 / 40.2 GB · 77 MB/s · 剩余约 6 分 30 秒 · <文件>`` 的行，
 在终端里用同一行重画进度条；其它行照常输出（先结束正在刷新的进度行）。
