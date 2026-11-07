@@ -62,7 +62,8 @@ while ($true) {
             "--services", "mock,h3_fl2va,h3_ref2va,breeze_tts_2,indextts2,seedvr2_7b_sharp_fp8,stable_audio_3,yue2,qwen_image",
             "--resource-name", "exclusive_gpu",
             "--auth-token-env", "SLATEHAND_MODEL_SERVICE_TOKEN",
-            "--controller-lease-timeout-seconds", "20"
+            "--controller-lease-timeout-seconds", "20",
+            "--exit-when-controller-lost"
         )
     # Cache the handle before waiting: Windows PowerShell 5.1 otherwise may report
     # a null ExitCode, and Start-Process -Wait would also wait for child runtimes.

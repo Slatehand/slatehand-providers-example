@@ -461,8 +461,10 @@ def create_breeze_resident_runner(runtime_root: Path) -> ResidentProcessRunner:
     """Create a lightweight supervisor; Breeze's large WSL process is lazy."""
 
     def command() -> list[str]:
-        if os.name != "nt":
-            raise RuntimeError("默认 Breeze TTS 2 runtime 只能从 Windows 调用 WSL。")
+        if os.name != "nt" and not sys.platform.startswith("linux"):
+            raise RuntimeError(
+                "默认 Breeze TTS 2 runtime 只能在 Windows（WSL）或 Linux 节点上运行。"
+            )
         script = Path(__file__).with_name("breeze_tts2_worker.py").resolve()
         return [
             os.environ.get("SLATEHAND_BREEZE_PYTHON_HOST", sys.executable),
@@ -484,11 +486,23 @@ def create_breeze_resident_runner(runtime_root: Path) -> ResidentProcessRunner:
         return value
 
     def terminate_runtime(_pid: int) -> None:
+        port = os.environ.get("SLATEHAND_BREEZE_PORT", "7860")
+        if sys.platform.startswith("linux"):
+            # Linux 节点：worker 自己按进程组停止 API；这里兜底清理同一固定签名的残留进程。
+            model = os.environ.get("SLATEHAND_BREEZE_MODEL", "")
+            if model:
+                subprocess.run(
+                    ["pkill", "-TERM", "-f", breeze_process_pattern(model, port)],
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                )
+            return
         if os.name != "nt":
             return
         wsl = os.environ.get("SLATEHAND_WSL_EXE", r"C:\Windows\System32\wsl.exe")
         distribution = os.environ.get("SLATEHAND_WSL_DISTRIBUTION", "Ubuntu")
-        port = os.environ.get("SLATEHAND_BREEZE_PORT", "7860")
         model = os.environ.get("SLATEHAND_BREEZE_MODEL", "/home/ljx/ai/models/Breeze-TTS-2")
         subprocess.run(
             [

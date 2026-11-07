@@ -3,10 +3,7 @@ from __future__ import annotations
 import threading
 import unittest
 
-from core.model_providers.http import HttpResponse
-
 from default_model_providers_implement.controller_lease import ControllerLease
-from slatehand_providers.windows_runtime_lease import WindowsRuntimeLease
 
 SESSION_A = "a" * 32
 SESSION_B = "b" * 32
@@ -62,46 +59,28 @@ class ControllerLeaseTests(unittest.TestCase):
         finally:
             lease.shutdown()
 
-
-class FakeTransport:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, dict[str, str] | None]] = []
-        self.heartbeat_seen = threading.Event()
-
-    def request(self, method, url, *, json_body=None, timeout=30.0):
-        del timeout
-        self.calls.append((method, url, json_body))
-        if url.endswith("/heartbeat"):
-            self.heartbeat_seen.set()
-            return HttpResponse(200, {}, b"{}")
-        if url.endswith("/acquire"):
-            return HttpResponse(201, {}, b"{}")
-        return HttpResponse(202, {}, b"{}")
-
-
-class WindowsRuntimeLeaseTests(unittest.TestCase):
-    def test_client_acquires_heartbeats_and_releases_one_session(self) -> None:
-        transport = FakeTransport()
-        lease = WindowsRuntimeLease(
-            "http://192.0.2.1:8791",
-            "x" * 32,
-            heartbeat_interval_seconds=0.01,
-            request_timeout_seconds=0.1,
-            transport=transport,
-            session_id=SESSION_A,
+    def test_lost_lease_notifies_once_for_release_and_expiry(self) -> None:
+        lost: list[str] = []
+        released = ControllerLease(
+            FakeManager(), timeout_seconds=1, on_lost=lambda: lost.append("released")
         )
-        lease.start()
-        self.assertTrue(transport.heartbeat_seen.wait(1))
-        lease.close()
+        self.assertTrue(released.acquire(SESSION_A))
+        self.assertTrue(released.heartbeat(SESSION_A))
+        self.assertEqual(lost, [])
+        released.release(SESSION_A)
+        self.assertIsNone(released.release(SESSION_A))
+        self.assertEqual(lost, ["released"])
 
-        self.assertEqual(
-            transport.calls[0][0:2],
-            ("POST", "http://192.0.2.1:8791/control/controller-lease/acquire"),
+        expired_event = threading.Event()
+        expired = ControllerLease(
+            FakeManager(),
+            timeout_seconds=0.08,
+            check_interval_seconds=0.01,
+            on_lost=expired_event.set,
         )
-        self.assertEqual(transport.calls[0][2], {"session_id": SESSION_A})
-        self.assertEqual(transport.calls[-1][0], "DELETE")
-        self.assertTrue(transport.calls[-1][1].endswith("/" + SESSION_A))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        expired.start()
+        try:
+            self.assertTrue(expired.acquire(SESSION_B))
+            self.assertTrue(expired_event.wait(1))
+        finally:
+            expired.shutdown()

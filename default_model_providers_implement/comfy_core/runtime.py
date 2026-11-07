@@ -447,8 +447,8 @@ class ComfyCoreH3Runtime(ComfyCoreRuntime):
         weights = DIFFUSION_MODELS[request.base_model][request.mode]
         if self.folder_paths.get_full_path("diffusion_models", weights) is None:
             raise RuntimeError(
-                f"本节点未部署 {DIFFUSION_LABELS[request.base_model]} 权重（{weights}）；"
-                "请换基础模型预设或运行节点。"
+                f"本节点还没有 {DIFFUSION_LABELS[request.base_model]} 权重（{weights}）："
+                "可能仍在后台搬运或未部署；请稍后重试，或换基础模型预设、运行节点。"
             )
         workflow = build_h3_workflow(
             H3GraphInputs(

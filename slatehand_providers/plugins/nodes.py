@@ -1,4 +1,4 @@
-"""H3 运行节点路由：同一插件可同时接入多个部署节点，按实例设置 ``node`` 选择提交目标。
+"""运行节点路由（H3、Breeze 共用）：一个插件可同时接入多个部署节点，按设置 ``node`` 选提交目标。
 
 切换节点只影响新提交。句柄记住提交时的节点，之后的 observe/cancel/read_artifact 回到原节点，
 因此切换不会打断已在运行的任务。默认节点（本地 Windows）的句柄保持原始 job token，与切换前
@@ -14,23 +14,36 @@ from core.model_providers.boundary import (
     ModelProviderError,
     ProviderHandle,
 )
+from core.model_providers.manifest import Field, Option, Widget
 
 DEFAULT_NODE = "windows"
 NODE_LABELS = {"windows": "本地 Windows", "colab": "Colab G4"}
 
 
-class H3NodeRouter:
+def node_setting() -> Field:
+    """插件实例设置「运行节点」：只影响新提交；运行中的任务按句柄回到提交时的节点。"""
+    return Field(
+        "node",
+        Widget.ENUM,
+        "运行节点",
+        default=DEFAULT_NODE,
+        options=tuple(Option(key, label) for key, label in NODE_LABELS.items()),
+        summary=True,
+    )
+
+
+class NodeRouter:
     """包装同一 recipe 在各节点上的实现；对 Core 表现为单一实现。"""
 
     def __init__(self, label: str, providers: Mapping[str, object]) -> None:
         if not providers:
-            raise ValueError("H3 至少需要一个运行节点。")
+            raise ValueError(f"{label} 至少需要一个运行节点。")
         unknown = set(providers) - set(NODE_LABELS)
         if unknown:
-            raise ValueError(f"未知 H3 运行节点：{', '.join(sorted(unknown))}")
+            raise ValueError(f"未知运行节点：{', '.join(sorted(unknown))}")
         identities = {(p.plugin_id, p.plugin_version) for p in providers.values()}  # type: ignore[attr-defined]
         if len(identities) != 1:
-            raise ValueError("各节点的 H3 实现必须是同一插件版本。")
+            raise ValueError("各节点的实现必须是同一插件版本。")
         ((self.plugin_id, self.plugin_version),) = identities
         self._label = label
         self._providers = dict(providers)

@@ -12,9 +12,9 @@ from core.model_providers.registry import PluginInstance
 
 from slatehand_providers.plugins.minimax_h3.fl2va import MiniMaxH3FL2VAProvider
 from slatehand_providers.plugins.minimax_h3.ref2va import MiniMaxH3Ref2VAProvider
+from slatehand_providers.plugins.nodes import DEFAULT_NODE, NodeRouter
 
 from .manifest import MANIFEST
-from .nodes import DEFAULT_NODE, H3NodeRouter
 from .prompt_context import format_prompt_workset, prompt_skills
 from .prompt_lint import lint_h3_prompt
 
@@ -41,11 +41,11 @@ def plugin_instance(
         prompt_skills=prompt_skills,
         prompt_linter=lint_h3_prompt,
         recipes={
-            "minimax_h3.fl2va": H3NodeRouter(
+            "minimax_h3.fl2va": NodeRouter(
                 "H3 FL2VA",
                 {key: MiniMaxH3FL2VAProvider(*node) for key, node in all_nodes.items()},
             ),
-            "minimax_h3.ref2va": H3NodeRouter(
+            "minimax_h3.ref2va": NodeRouter(
                 "H3 Ref2VA",
                 {key: MiniMaxH3Ref2VAProvider(*node) for key, node in all_nodes.items()},
             ),

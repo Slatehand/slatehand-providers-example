@@ -1,8 +1,9 @@
-"""Lazy Breeze-TTS-2 bridge used by the Windows exclusive GPU scheduler.
+"""Lazy Breeze-TTS-2 bridge used by the exclusive GPU scheduler.
 
 The lightweight JSONL worker itself starts with the Provider service.  The
-large Breeze WSL process is started only when the first Breeze task arrives and
-is stopped when the scheduler switches to H3/another model family.
+large Breeze API process is started only when the first Breeze task arrives and
+is stopped when the scheduler switches to H3/another model family.  On Windows
+it runs inside WSL; on Linux (the Colab node) it runs natively in its own venv.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import ipaddress
 import json
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -60,16 +62,18 @@ class BreezeApi:
         # WSL NAT 模式的 localhost 转发在虚拟机冷启动后可能不建立，因此 API 绑定并直连
         # WSL eth0 地址；该地址只在 Windows 主机与 WSL 之间的 NAT 网段内可达。
         self._host = "127.0.0.1"
+        # Linux 节点（Colab）直接在本机 venv 中运行 Breeze API，不经 WSL。
+        self._native = sys.platform.startswith("linux")
 
     def ensure_started(self) -> None:
         if self._process is not None and self._process.poll() is None:
             return
-        if os.name != "nt":
-            raise RuntimeError("Breeze runtime 只能从 Windows 调用 WSL。")
+        if os.name != "nt" and not self._native:
+            raise RuntimeError("Breeze runtime 只能在 Windows（WSL）或 Linux 节点上运行。")
         code = self._start_once()
         if code is None:
             return
-        if code not in _WSL_RESET_EXIT_CODES:
+        if self._native or code not in _WSL_RESET_EXIT_CODES:
             raise RuntimeError(self._startup_failure(code))
         emit(
             "progress",
@@ -84,6 +88,45 @@ class BreezeApi:
 
     def _start_once(self) -> int | None:
         """启动并等到端口可连；进程在启动期退出时返回退出码。"""
+        if self._native:
+            self._launch_native()
+        else:
+            self._launch_wsl()
+        return self._wait_ready()
+
+    def _launch_native(self) -> None:
+        if not (
+            os.access(self._python, os.X_OK)
+            and os.path.isdir(self._model)
+            and os.path.isfile(os.path.join(self._repository, "breeze_infer", "api.py"))
+        ):
+            raise RuntimeError(
+                "Breeze 部署预检失败：固定仓库、Python 或模型不存在"
+                "（Colab 节点可能仍在后台安装，稍后重试）。"
+            )
+        self._host = "127.0.0.1"
+        command = [
+            self._python,
+            "-m",
+            "breeze_infer.api",
+            self._model,
+            "--host",
+            self._host,
+            "--port",
+            str(self._port),
+            "--fast-all",
+        ]
+        with self._open_log() as log:
+            self._process = subprocess.Popen(
+                command,
+                cwd=self._repository,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+
+    def _launch_wsl(self) -> None:
         probe = (
             f"test -x '{self._python}' && test -d '{self._model}' && "
             f"test -f '{self._repository}/breeze_infer/api.py' && hostname -I"
@@ -122,6 +165,9 @@ class BreezeApi:
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
+
+    def _wait_ready(self) -> int | None:
+        assert self._process is not None
         emit("progress", "Breeze TTS 2 正在加载并预热快速推理路径。", value=0.05)
         deadline = time.monotonic() + _STARTUP_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
@@ -252,6 +298,17 @@ class BreezeApi:
     def stop(self) -> None:
         process, self._process = self._process, None
         if process is None:
+            return
+        if self._native:
+            # 原生进程以独立进程组启动，连同其子进程一起结束。
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGTERM)
+            with contextlib.suppress(Exception):
+                process.wait(timeout=10)
+            if process.poll() is None:
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
             return
         # The WSL launcher owns the API child; use the exact fixed command
         # signature so a stale Breeze process cannot survive a model switch.

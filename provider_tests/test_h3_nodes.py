@@ -15,6 +15,7 @@ from core.model_providers.recipe import MediaInput, build_recipe_request
 from slatehand_providers.bundle import create_bundle
 from slatehand_providers.colab_tunnel import ColabTunnelService
 from slatehand_providers.deployment import COLAB_TOKEN_FILE, ENV_FILE, TOKEN_FILE, read_deployment
+from slatehand_providers.plugins.breeze_tts2.plugin import plugin_instance as breeze_plugin
 from slatehand_providers.plugins.minimax_h3 import MANIFEST
 from slatehand_providers.plugins.minimax_h3.plugin import plugin_instance
 
@@ -138,7 +139,6 @@ def test_bundle_installs_one_h3_plugin_with_both_nodes_and_the_tunnel(tmp_path: 
     settings = {
         "SLATEHAND_COLAB_SESSION": "slate",
         "SLATEHAND_WINDOWS_RUNTIME_ENDPOINT": "http://10.0.0.5:8791",
-        "SLATEHAND_AUTOSTART_WINDOWS_PROVIDER": "0",
         "SLATEHAND_AUTOSTART_MAC_PROVIDER": "0",
     }
     bundle = create_bundle(
@@ -150,13 +150,14 @@ def test_bundle_installs_one_h3_plugin_with_both_nodes_and_the_tunnel(tmp_path: 
     assert any(isinstance(service, ColabTunnelService) for service in bundle.services)
 
 
-def test_colab_only_bundle_still_installs_h3(tmp_path: Path) -> None:
+def test_colab_only_bundle_installs_gpu_plugins_tunnel_and_lease(tmp_path: Path) -> None:
     settings = {"SLATEHAND_COLAB_SESSION": "slate", "SLATEHAND_AUTOSTART_MAC_PROVIDER": "0"}
     bundle = create_bundle(
         BundleContext(_provider(tmp_path, settings, windows=False), tmp_path / "runtime")
     )
-    (h3,) = [plugin for plugin in bundle.plugins if plugin.plugin_id == "minimax_h3"]
-    assert h3.recipes["minimax_h3.fl2va"].nodes == ("colab",)
+    plugins = {plugin.plugin_id: plugin for plugin in bundle.plugins}
+    assert plugins["minimax_h3"].recipes["minimax_h3.fl2va"].nodes == ("colab",)
+    assert plugins["breeze_tts2"].recipes["breeze_tts2.clone"].nodes == ("colab",)
     assert [type(service) for service in bundle.services] == [ColabTunnelService]
 
 
@@ -204,3 +205,16 @@ def test_tunnel_forwards_loopback_to_the_vm_service_port(tmp_path: Path) -> None
     assert "127.0.0.1:18791:127.0.0.1:8791" in command
     assert "ProxyCommand=colab ssh --proxy-mode -s slate" in command
     assert "ExitOnForwardFailure=yes" in command
+
+
+def test_breeze_node_setting_routes_submissions(tmp_path: Path) -> None:
+    from slatehand_providers.plugins.breeze_tts2 import MANIFEST as BREEZE
+
+    assert BREEZE.default_settings() == {"node": "windows"}
+    plugin = breeze_plugin(None, tmp_path, nodes={"colab": ("http://colab", Transport("colab"))})
+    router = plugin.recipes["breeze_tts2.voice_design"]
+    assert router is plugin.recipes["breeze_tts2.clone"]
+    assert router.nodes == ("colab",)
+    with pytest.raises(ModelProviderError) as error:
+        router.observe(ProviderHandle(router.plugin_id, router.plugin_version, "speech-1"))
+    assert error.value.code == "node_unavailable"

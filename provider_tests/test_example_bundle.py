@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,13 +10,7 @@ from server.provider_bundles import load_factory, read_provider_manifest
 
 from slatehand_providers.bundle import create_bundle
 from slatehand_providers.deployment import ENV_FILE, TOKEN_FILE, read_deployment
-from slatehand_providers.services import (
-    MacProviderService,
-    WhisperService,
-    WindowsProviderService,
-    powershell_command,
-)
-from slatehand_providers.windows_runtime_lease import WindowsRuntimeLease
+from slatehand_providers.services import MacProviderService, WhisperService
 
 PROVIDER_ROOT = Path(__file__).resolve().parents[1]
 WINDOWS = {
@@ -73,11 +65,8 @@ def test_full_deployment_installs_plugins_in_priority_order(tmp_path: Path, monk
         "qwen_image",
         "indextts2",
     ]
-    assert [type(service) for service in bundle.services] == [
-        WindowsProviderService,
-        WindowsRuntimeLease,
-        MacProviderService,
-    ]
+    # Windows 节点的启停与心跳由工作区脚本手动管理，Core 只装插件。
+    assert [type(service) for service in bundle.services] == [MacProviderService]
 
 
 def test_without_token_only_mac_services_are_used(tmp_path: Path, monkeypatch) -> None:
@@ -91,14 +80,14 @@ def test_without_token_only_mac_services_are_used(tmp_path: Path, monkeypatch) -
     assert bundle.services == ()
 
 
-def test_windows_without_autostart_keeps_only_the_lease(tmp_path: Path) -> None:
+def test_windows_node_needs_only_endpoint_and_token(tmp_path: Path) -> None:
     settings = {
         "SLATEHAND_WINDOWS_RUNTIME_ENDPOINT": "http://10.0.0.5:8791",
-        "SLATEHAND_AUTOSTART_WINDOWS_PROVIDER": "0",
         "SLATEHAND_AUTOSTART_MAC_PROVIDER": "0",
     }
     bundle = create_bundle(_context(_provider(tmp_path, settings)))
-    assert [type(service) for service in bundle.services] == [WindowsRuntimeLease]
+    assert "minimax_h3" in [plugin.plugin_id for plugin in bundle.plugins]
+    assert bundle.services == ()
 
 
 def test_local_whisper_is_started_when_binary_and_model_exist(tmp_path: Path) -> None:
@@ -122,11 +111,11 @@ def test_environment_overrides_the_env_file(tmp_path: Path, monkeypatch) -> None
     settings = {
         "SLATEHAND_MAC_PROVIDER_PORT": "8792",
         "SLATEHAND_WINDOWS_RUNTIME_ENDPOINT": "http://10.0.0.5:8791",
-        "SLATEHAND_AUTOSTART_WINDOWS_PROVIDER": "0",
     }
     deployment = read_deployment(_provider(tmp_path, settings))
     assert deployment.mac_endpoint == "http://127.0.0.1:9000"
-    assert deployment.windows is not None and deployment.windows.ssh_target is None
+    assert deployment.windows is not None
+    assert deployment.windows.breeze_endpoint == "http://10.0.0.5:8791"
 
 
 @pytest.mark.parametrize(
@@ -137,49 +126,9 @@ def test_environment_overrides_the_env_file(tmp_path: Path, monkeypatch) -> None
         ({"SLATEHAND_AUTOSTART_MAC_PROVIDER": "yes"}, "0 或 1"),
         ({"SLATEHAND_WINDOWS_RUNTIME_ENDPOINT": "http://u:p@host"}, "HTTP 地址"),
         ({}, "SLATEHAND_WINDOWS_RUNTIME_ENDPOINT"),
-        ({"SLATEHAND_WINDOWS_RUNTIME_ENDPOINT": "http://10.0.0.5:8791"}, "SSH_TARGET"),
+        ({"SLATEHAND_AUTOSTART_WINDOWS_PROVIDER": "0"}, "已知的 SLATEHAND_"),
     ],
 )
 def test_invalid_deployment_settings_are_rejected(tmp_path: Path, settings, message) -> None:
     with pytest.raises(ValueError, match=message):
         read_deployment(_provider(tmp_path, settings))
-
-
-def _completed(returncode: int = 0, stderr: str = ""):
-    return subprocess.CompletedProcess([], returncode, "", stderr)
-
-
-def test_windows_service_runs_fixed_scripts_over_ssh(tmp_path: Path, monkeypatch) -> None:
-    calls: list[list[str]] = []
-    deployment = read_deployment(_provider(tmp_path, WINDOWS)).windows
-    service = WindowsProviderService(
-        deployment, run=lambda command, **_: calls.append(command) or _completed()
-    )
-    monkeypatch.setattr("slatehand_providers.services.wait_reachable", lambda *a, **k: None)
-
-    service.start()
-    service.close()
-
-    assert [command[:6] for command in calls] == [
-        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "gpu-node"]
-    ] * 2
-    scripts = [base64.b64decode(command[-1]).decode("utf-16le") for command in calls]
-    root = "E:\\Project\\slatehand-providers-example\\default_model_providers_implement\\windows"
-    assert f"'{root}\\install_scheduled_task.ps1'" in scripts[0]
-    assert "-ListenAddress '10.0.0.5'" in scripts[0]
-    assert f"'{root}\\stop_services.ps1'" in scripts[1]
-
-
-def test_windows_start_failure_raises_and_close_only_warns(tmp_path: Path, capsys) -> None:
-    deployment = read_deployment(_provider(tmp_path, WINDOWS)).windows
-    service = WindowsProviderService(deployment, run=lambda *a, **k: _completed(1, "boom"))
-    with pytest.raises(RuntimeError, match="boom"):
-        service.start()
-    service.close()
-    assert "未能确认关闭" in capsys.readouterr().err
-
-
-def test_powershell_command_quotes_arguments() -> None:
-    script = base64.b64decode(powershell_command("C:\\it's.ps1", "1.2.3.4")).decode("utf-16le")
-    assert "$scriptPath = 'C:\\it''s.ps1'" in script
-    assert "& $scriptPath -ListenAddress '1.2.3.4'" in script

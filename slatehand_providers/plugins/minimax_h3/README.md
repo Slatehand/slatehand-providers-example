@@ -8,7 +8,7 @@
   “有对白默认 Ref2VA”的默认规则；`render_settings` 把实例设置换算成提交时的画布与采样组合。
 - `plugin.py`：`plugin_instance(endpoint, transport, nodes=...)` 构造可安装的插件实例：`endpoint` 是默认的
   本地 Windows 节点，`nodes` 追加其它节点（目前为 `colab`）。
-- `nodes.py`：`H3NodeRouter` 把同一 recipe 在各节点上的实现包成一个实现。新提交按设置 `node` 选节点；
+- `../nodes.py`（与 Breeze 共用）：`NodeRouter` 把同一 recipe 在各节点上的实现包成一个实现。新提交按设置 `node` 选节点；
   句柄记住提交节点（Windows 句柄保持原始 token，其它节点加 `<node>:` 前缀），observe/cancel/read_artifact
   回到原节点，所以切换节点不打断运行中的任务。选中未接入的节点时提交返回 `node_unavailable`。
 

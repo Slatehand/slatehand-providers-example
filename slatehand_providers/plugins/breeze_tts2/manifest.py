@@ -13,6 +13,8 @@ from core.model_providers.manifest import (
     seed_field,
 )
 
+from slatehand_providers.plugins.nodes import node_setting
+
 _TEXT = Field(
     "text", Widget.PROMPT, "朗读文本", max_length=20_000, min_length=1, role=Role.SPEECH_TEXT
 )
@@ -21,6 +23,7 @@ MANIFEST = PluginManifest(
     plugin_id="breeze_tts2",
     plugin_version=1,
     label="Breeze-TTS-2",
+    settings=(node_setting(),),
     recipes=(
         Recipe(
             "breeze_tts2.voice_design",

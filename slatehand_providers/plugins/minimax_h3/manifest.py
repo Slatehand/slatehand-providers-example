@@ -22,8 +22,8 @@ from core.model_providers.manifest import (
 )
 
 from slatehand_providers.plugins.minimax_h3.contracts import H3_BASE_MODELS
-from slatehand_providers.plugins.minimax_h3.nodes import DEFAULT_NODE, NODE_LABELS
 from slatehand_providers.plugins.minimax_h3.render import H3RenderSettings, H3Resolution
+from slatehand_providers.plugins.nodes import node_setting
 
 # 预设把“基础模型 + 步数”绑在一起，避免分开选择出非法组合。
 _PRESETS = {
@@ -82,15 +82,7 @@ MANIFEST = PluginManifest(
             summary_label="Sage",
         ),
         Field("selflift", Widget.TOGGLE, "SelfLift", default=True, summary=True),
-        # 只影响新提交；运行中的任务按句柄回到提交时的节点。
-        Field(
-            "node",
-            Widget.ENUM,
-            "运行节点",
-            default=DEFAULT_NODE,
-            options=tuple(Option(key, label) for key, label in NODE_LABELS.items()),
-            summary=True,
-        ),
+        node_setting(),
     ),
     hints=(("soft_duration_limit_seconds", 15),),
     recipes=(

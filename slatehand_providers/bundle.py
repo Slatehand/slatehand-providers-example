@@ -3,8 +3,9 @@
 部署配置来自 Provider 目录下的 ``provider.local.env`` 与 ``var/secrets/``（见 ``deployment``）。
 安装顺序决定未显式绑定时的默认实现：Codex 先于 AGY 与 Qwen Image（生图/改图），
 Stable Audio 3 先于 YuE2（文生音频），Breeze 先于 IndexTTS2.5（声音克隆）。
-随 Core 启停的服务依次为：Windows 模型服务（经 SSH）、Windows 控制租约、Colab 隧道、
-Mac LaunchAgent、Whisper。H3 可同时接入 Windows 与 Colab 两个节点，由插件设置选择新提交的节点。
+随 Core 启停的服务依次为：Colab 隧道、Mac LaunchAgent、Whisper。Windows 与 Colab 节点的启停
+（以及 Windows 的活性心跳）由 scripts/windows_node.sh / colab_node.sh 手动管理，Core 只连接。
+H3 与 Breeze 可同时接入 Windows 与 Colab 两个节点，由插件设置选择新提交的节点。
 """
 
 from __future__ import annotations
@@ -32,8 +33,7 @@ from slatehand_providers.plugins.yue2.plugin import plugin_instance as yue2_plug
 
 from .colab_tunnel import ColabTunnelService
 from .deployment import Deployment, read_deployment
-from .services import MacProviderService, WhisperService, WindowsProviderService
-from .windows_runtime_lease import WindowsRuntimeLease
+from .services import MacProviderService, WhisperService
 
 MAC_INSTALL_SCRIPT = "default_model_providers_implement/macos/install_launch_agent.sh"
 
@@ -55,9 +55,9 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
     else:
         print("未发现本机 Whisper ASR 与模型；Breeze 参考文字仍可手工填写。", flush=True)
     colab = deployment.colab
-    h3_nodes = {}
+    gpu_nodes = {}
     if colab is not None:
-        h3_nodes["colab"] = (
+        gpu_nodes["colab"] = (
             colab.endpoint,
             UrllibTransport({"Authorization": "Bearer " + colab.token}),
         )
@@ -66,14 +66,14 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
         authorized = UrllibTransport({"Authorization": "Bearer " + windows.token})
         plugins.append(
             breeze_tts2_plugin(
-                windows.breeze_endpoint, context.runtime_directory / "breeze-tts2", authorized
+                windows.breeze_endpoint,
+                context.runtime_directory / "breeze-tts2",
+                authorized,
+                nodes=gpu_nodes,
             )
         )
-        if windows.ssh_target is not None:
-            services.append(WindowsProviderService(windows))
-        services.append(WindowsRuntimeLease(windows.endpoint, windows.token))
         plugins += [
-            minimax_h3_plugin(windows.endpoint, authorized, nodes=h3_nodes),
+            minimax_h3_plugin(windows.endpoint, authorized, nodes=gpu_nodes),
             seedvr2_plugin(windows.endpoint, authorized),
             stable_audio_3_plugin(windows.endpoint, authorized),
             yue2_plugin(windows.endpoint, authorized),
@@ -81,8 +81,12 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
             indextts2_plugin(windows.endpoint, authorized),
         ]
     if windows is None and colab is not None:
-        plugins.append(minimax_h3_plugin(nodes=h3_nodes))
+        plugins += [
+            breeze_tts2_plugin(None, context.runtime_directory / "breeze-tts2", nodes=gpu_nodes),
+            minimax_h3_plugin(nodes=gpu_nodes),
+        ]
     if colab is not None:
+        # Colab VM 由人手动开关（scripts/colab_node.sh）；这里只维持隧道，不启停、不租约。
         services.append(ColabTunnelService(colab))
     if deployment.mac_autostart and sys.platform == "darwin":
         services.append(MacProviderService(context.provider_directory / MAC_INSTALL_SCRIPT, mac))

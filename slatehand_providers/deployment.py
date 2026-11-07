@@ -28,7 +28,7 @@ KEYS = frozenset(
         "SLATEHAND_WHISPER_SERVER",
         "SLATEHAND_WHISPER_MODEL",
         "SLATEHAND_WINDOWS_RUNTIME_ENDPOINT",
-        "SLATEHAND_AUTOSTART_WINDOWS_PROVIDER",
+        # 以下三项只供 scripts/windows_node.sh 启停 Windows 服务，Core 不使用。
         "SLATEHAND_WINDOWS_SSH_TARGET",
         "SLATEHAND_WINDOWS_REPOSITORY_ROOT",
         "SLATEHAND_WINDOWS_LISTEN_ADDRESS",
@@ -42,14 +42,11 @@ KEYS = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class WindowsDeployment:
-    """Windows GPU 节点；``ssh_target`` 为空表示不由 Core 启停（服务已自行运行）。"""
+    """Windows GPU 节点。服务启停与活性心跳由 scripts/windows_node.sh 手动管理，Core 只连接。"""
 
     endpoint: str
     token: str
     breeze_endpoint: str
-    ssh_target: str | None = None
-    repository_root: str | None = None
-    listen_address: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,23 +118,7 @@ def _windows(directory: Path, values: dict[str, str]) -> WindowsDeployment | Non
     if not 32 <= len(token) <= 512:
         raise ValueError("Windows Provider token 长度不合法。")
     breeze = endpoint(values.get("SLATEHAND_BREEZE_ENDPOINT"), "Breeze") or windows
-    if not _flag(values, "SLATEHAND_AUTOSTART_WINDOWS_PROVIDER"):
-        return WindowsDeployment(windows, token, breeze)
-    remote = {
-        key: values.get(key, "").strip()
-        for key in (
-            "SLATEHAND_WINDOWS_SSH_TARGET",
-            "SLATEHAND_WINDOWS_REPOSITORY_ROOT",
-            "SLATEHAND_WINDOWS_LISTEN_ADDRESS",
-        )
-    }
-    missing = [key for key, value in remote.items() if not value]
-    if missing:
-        raise ValueError(
-            f"由 Core 启停 Windows 服务需要在 {ENV_FILE} 设置 {'、'.join(missing)}；"
-            "不需要时设 SLATEHAND_AUTOSTART_WINDOWS_PROVIDER=0。"
-        )
-    return WindowsDeployment(windows, token, breeze, *remote.values())
+    return WindowsDeployment(windows, token, breeze)
 
 
 def _colab(directory: Path, values: dict[str, str]) -> ColabDeployment | None:

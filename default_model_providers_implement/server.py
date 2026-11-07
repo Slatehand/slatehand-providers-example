@@ -69,6 +69,7 @@ class ModelApiServer(ThreadingHTTPServer):
         resource_name: str = "exclusive_gpu",
         auth_token: str | None = None,
         controller_lease_timeout_seconds: float | None = None,
+        exit_when_controller_lost: bool = False,
         max_concurrent_tasks: int = 1,
         lanes: tuple[LaneSpec, ...] | None = None,
     ) -> None:
@@ -132,6 +133,12 @@ class ModelApiServer(ThreadingHTTPServer):
             ControllerLease(
                 self.manager,
                 timeout_seconds=controller_lease_timeout_seconds,
+                # 控制方（Mac 心跳）离开即退出服务进程；正常关闭路径会释放所有驻留 runtime。
+                on_lost=(
+                    (lambda: threading.Thread(target=self.shutdown, daemon=True).start())
+                    if exit_when_controller_lost
+                    else None
+                ),
             )
             if controller_lease_timeout_seconds is not None
             else None
@@ -896,6 +903,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="启用私有 Mac Core 活性租约，并在超时后取消任务、释放驻留 GPU runtime。",
     )
+    parser.add_argument(
+        "--exit-when-controller-lost",
+        action="store_true",
+        help="已持有的控制租约被释放或超时后退出服务进程（退出码 0）。",
+    )
     return parser
 
 
@@ -976,6 +988,10 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("Controller 租约超时必须在 5 到 300 秒之间。")
         if auth_token is None:
             raise SystemExit("Controller 租约只能在启用 Bearer Token 时使用。")
+    elif args.exit_when_controller_lost:
+        raise SystemExit(
+            "--exit-when-controller-lost 需要同时启用 --controller-lease-timeout-seconds。"
+        )
     if not 1 <= max_concurrent_tasks <= 8:
         raise SystemExit("--max-concurrent-tasks 必须在 1 到 8 之间。")
     server = ModelApiServer(
@@ -985,6 +1001,7 @@ def main(argv: list[str] | None = None) -> int:
         resource_name=resource_name,
         auth_token=auth_token,
         controller_lease_timeout_seconds=args.controller_lease_timeout_seconds,
+        exit_when_controller_lost=args.exit_when_controller_lost,
         max_concurrent_tasks=max_concurrent_tasks,
         lanes=lanes,
     )

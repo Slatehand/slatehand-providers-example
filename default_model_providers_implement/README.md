@@ -28,10 +28,11 @@ Windows 服务内部只有一个 `exclusive_gpu` 执行槽。当前模型族完�
 同一 runtime，只有队列切换到另一模型族、任务被取消或服务关闭时才释放。这个生命周期是私有部署细节，
 不会出现在 Core 的模型插件接口里。
 
-Windows 默认启动还要求 Slatehand Core 持有一个短期控制租约。Core 每 5 秒 heartbeat；正常关闭时主动
-释放，失联 20 秒时 Windows 自动停止接收新任务、取消运行中及排队任务，并通过 GPU 调度线程释放驻留
-runtime。任务记录保留明确的 `controller_lease_released` 或 `controller_lease_expired` 原因，Core 恢复后
-可以显式创建新的 Generation 重试。租约接口复用 Bearer Token，只接受固定的随机 Session ID，不接受
+Windows 默认启动还要求 Mac 侧持有一个短期控制租约：由人手动运行的 `scripts/windows_node.sh up` 在后台启动
+`scripts/node_heartbeat.py`，每 5 秒 heartbeat；调用方退出时主动释放，失联 20 秒时 Windows 自动停止接收新任务、
+取消运行中及排队任务，并通过 GPU 调度线程释放驻留 runtime。Windows 以 `--exit-when-controller-lost` 启动，
+租约释放或超时后服务进程随即以退出码 0 关闭（`run_server.ps1` 不重启）。Core 本身不持有租约。任务记录保留明确的
+`controller_lease_released` 或 `controller_lease_expired` 原因，心跳恢复后可以显式创建新的 Generation 重试。租约接口复用 Bearer Token，只接受固定的随机 Session ID，不接受
 路径、模型参数或命令。它只是当前 Mac + Windows 默认部署的控制面，不是公共 Provider contract。
 
 ## Windows
@@ -63,7 +64,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File windows\uninstall_schedu
 计划任务配了失败自动重启（每分钟一次、共三次），因此脚本在结束进程之后会再停一次任务压掉已排队的重启，
 并按固定服务模块名清理孤儿进程，最后确认进程与监听端口都已释放，否则直接报错而不是静默留下 GPU 服务。
 该目录下的 `.ps1` 必须保持纯 ASCII：Windows PowerShell 5.1 会把无 BOM 的脚本按 ANSI 解码，非 ASCII 注释会破坏语法。
-Core 退出时 example bundle 的 Windows 服务经 SSH 调用它。`uninstall_scheduled_task.ps1` 才会删除计划任务，不能作为日常关闭入口。
+需要强制清理时可手工经 SSH 调用它。`uninstall_scheduled_task.ps1` 才会删除计划任务，不能作为日常关闭入口。
 
 安装脚本默认使用 `127.0.0.1`。LAN 部署须由部署者明确批准，例如：
 
@@ -81,14 +82,16 @@ LAN 模式仍强制 Bearer Token。
 
 服务重装后继续监听指定 LAN 地址：未认证请求返回 401，带 Token 的模型路由可达，Windows 未启用的 Codex image 路由返回 404。
 
-### Colab H3 节点
+### Colab 节点
 
-同一服务也可以在 Colab VM（Linux）上只启用 `h3_fl2va,h3_ref2va`：`colab/setup.sh` 安装与 Windows 相同 revision
-的 ComfyUI / comfyui-SelfLift 和 `sageattention==1.0.6`（保留 Colab 自带的 CUDA 版 torch），把 Drive 中的权重
-复制到本地盘，并按 Windows 节点相同的相对路径链接进 `ComfyUI/models`；`colab/run_server.sh` 以独立进程组在
+同一服务也可以在 Colab VM（Linux）上只启用 `h3_fl2va,h3_ref2va,breeze_tts_2`：`colab/setup.sh` 安装与 Windows
+相同 revision 的 ComfyUI / comfyui-SelfLift 和 `sageattention==1.0.6`（保留 Colab 自带的 CUDA 版 torch），把 Drive
+中的权重复制到本地盘，并按 Windows 节点相同的相对路径链接进 `ComfyUI/models`；Breeze TTS 2 使用上游
+`breezeblue-ai/breeze-tts` 固定 revision 与独立的 Python 3.12 venv（依赖按其 `requirements.txt`），worker 在 Linux
+上直接以独立进程组启动 `breeze_infer.api --fast-all`，不经 WSL。`colab/run_server.sh` 以独立进程组在
 `127.0.0.1:8791` 启动服务，Token 来自 `/root/.slatehand-colab-token`。固定图里带子目录的模型名按宿主系统的
-路径分隔符生成，Windows 与 Linux 共用同一份 `comfy_core`。Colab 节点不启用控制租约，由 Mac 侧
-`scripts/colab_node.sh` 开关。
+路径分隔符生成，Windows 与 Linux 共用同一份 `comfy_core`。Colab 节点不启用控制租约；VM 由人用
+`scripts/colab_node.sh` 手动开关。
 
 ### H3 Runtime
 

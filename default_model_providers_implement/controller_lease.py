@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import threading
 import time
+from collections.abc import Callable
 from typing import Protocol
 
 SESSION_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -15,7 +16,10 @@ class LeaseControlledResource(Protocol):
 
 
 class ControllerLease:
-    """私有默认部署的单 Core 活性租约。"""
+    """私有默认部署的单控制方活性租约。
+
+    ``on_lost`` 给出时，已持有的租约被释放或超时撤销后调用（任务已开始取消），用于让服务随之退出。
+    """
 
     def __init__(
         self,
@@ -23,12 +27,14 @@ class ControllerLease:
         *,
         timeout_seconds: float,
         check_interval_seconds: float = 1.0,
+        on_lost: Callable[[], None] | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("租约超时必须大于零。")
         if not 0 < check_interval_seconds <= timeout_seconds:
             raise ValueError("租约检查间隔不合法。")
         self._manager = manager
+        self._on_lost = on_lost
         self._timeout_seconds = timeout_seconds
         self._check_interval_seconds = check_interval_seconds
         self._lock = threading.RLock()
@@ -71,10 +77,12 @@ class ControllerLease:
                 return None
             self._session_id = None
             self._deadline = 0.0
-            return self._manager.revoke(
+            completed = self._manager.revoke(
                 message="Mac Core 已关闭，模型调用已取消。",
                 error_code="controller_lease_released",
             )
+        self._lost()
+        return completed
 
     def shutdown(self) -> None:
         self._stop.set()
@@ -92,6 +100,11 @@ class ControllerLease:
                     message="Mac Core 心跳超时，模型调用已取消并释放 GPU。",
                     error_code="controller_lease_expired",
                 )
+            self._lost()
+
+    def _lost(self) -> None:
+        if self._on_lost is not None:
+            self._on_lost()
 
 
 def _validate_session_id(session_id: str) -> None:
