@@ -35,7 +35,8 @@ for chunk in iter(lambda: process.stdout.read1(65536), b""):
     sys.stdout.flush()
 print(f"__SLATEHAND_RC__={process.wait()}")
 PY
-  } | "$COLAB" exec -s "$SESSION" --timeout 0 | tee "$output" | { grep -v '^__SLATEHAND_RC__=' || true; }
+  } | "$COLAB" exec -s "$SESSION" --timeout 0 | tee "$output" | { grep -v '^__SLATEHAND_RC__=' || true; } \
+    | python3 "$REPO/scripts/progress_view.py"
   status=$(sed -n 's/^__SLATEHAND_RC__=//p' "$output" | tail -n 1)
   rm -f "$output"
   [ "${status:-1}" = 0 ]
@@ -74,16 +75,19 @@ main() {
       remote "bash $REMOTE/default_model_providers_implement/colab/run_server.sh stop >/dev/null; bash $REMOTE/default_model_providers_implement/colab/run_server.sh start"
       echo "Colab 节点已可用 H3 Turbo。不用时记得 $0 down（空闲也按约每小时 10 个计算单元计费）。"
       echo "==> 后台搬运 Breeze、Hybrid V2、官方 BF16（搬完自动结束；Ctrl-C 只停止查看，不影响后台）"
-      last=""
-      while true; do
-        state=$(remote "tail -n 1 /content/slatehand-state/setup-background.log 2>/dev/null; kill -0 \$(cat /content/slatehand-state/setup-background.pid 2>/dev/null) 2>/dev/null && echo __RUNNING__ || true" 2>/dev/null || true)
-        line=$(printf '%s\n' "$state" | grep -v '^__RUNNING__$' | tail -n 1 || true)
-        [ -n "$line" ] && [ "$line" != "$last" ] && echo "$line"
-        last=$line
-        printf '%s\n' "$state" | grep -q '^__RUNNING__$' || break
-        sleep 10
-      done
-      echo "后台搬运已结束。"
+      # 进度行经 progress_view.py 原地刷新成进度条，不刷屏。
+      {
+        last=""
+        while true; do
+          state=$(remote "tail -n 1 /content/slatehand-state/setup-background.log 2>/dev/null; kill -0 \$(cat /content/slatehand-state/setup-background.pid 2>/dev/null) 2>/dev/null && echo __RUNNING__ || true" 2>/dev/null || true)
+          line=$(printf '%s\n' "$state" | grep -v '^__RUNNING__$' | tail -n 1 || true)
+          if [ -n "$line" ] && [ "$line" != "$last" ]; then echo "$line"; fi
+          last=$line
+          printf '%s\n' "$state" | grep -q '^__RUNNING__$' || break
+          sleep 5
+        done
+        echo "后台搬运已结束。"
+      } | python3 "$REPO/scripts/progress_view.py"
       ;;
     status)
       if ! session_running; then echo "会话 ${SESSION} 未运行。"; exit 1; fi

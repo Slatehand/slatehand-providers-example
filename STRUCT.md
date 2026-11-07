@@ -79,4 +79,5 @@
 - `scripts/check.sh`：本仓库工程门禁。
 - `scripts/ref2va_acceptance.py`、`scripts/seedvr2_upscale_acceptance.py`：真实媒体服务验收。
 - `scripts/windows_node.sh`、`scripts/node_heartbeat.py`：手动启动 Windows 节点（经 SSH 运行仓库内固定脚本）后在前台持续维持控制租约；Ctrl-C 或关闭终端即释放，Windows 服务随租约丢失自行退出。
+- `scripts/progress_view.py`：`colab_node.sh` 的显示过滤器，把复制进度行渲染成原地刷新的进度条。
 - `scripts/colab_node.sh`：手动开关 Colab 节点（开 G4、交互挂 Drive、同步代码与 Token、安装并启动服务后持续显示后台搬运进度；status；down 回收 VM）。远程命令走 `colab exec`，不与 Core 的隧道争用唯一的 `colab ssh` 连接。
