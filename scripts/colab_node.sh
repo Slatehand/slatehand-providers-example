@@ -44,7 +44,8 @@ PY
 session_running() { "$COLAB" sessions 2>/dev/null | grep -q "^\[$SESSION\] "; }
 drive_mounted() { remote "test -d /content/drive/MyDrive" >/dev/null 2>&1; }
 
-# 主体包在函数里并在文件末尾调用：bash 先读完整个文件再执行，运行中修改脚本不会读错位。
+# 主体包在函数里，并在最后一行“调用 + 退出”：bash 先读完整个文件与这一行再执行、执行完直接退出，
+# 运行中修改脚本也不会读错位。
 main() {
   case "${1:-}" in
     up)
@@ -107,5 +108,4 @@ main() {
   esac
 }
 
-main "$@"
-exit $?
+main "$@"; exit $?
