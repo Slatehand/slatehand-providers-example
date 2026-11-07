@@ -16,6 +16,7 @@
 - `deployment.py`：读取 `provider.local.env`（未知键拒绝、进程环境优先）与 `var/secrets/` 中的 Windows Token。
 - `services.py`：随 Core 启停的服务：经 SSH 启停 Windows 计划任务、Mac LaunchAgent 与本机 whisper-server。
 - `windows_runtime_lease.py`：对 Windows 媒体服务的控制租约心跳（bundle 服务）。
+- `colab_tunnel.py`：Colab H3 节点隧道（bundle 服务）：会话在线时经 `colab ssh` 把本机回环端口转发到 VM 模型服务，断开自动重连。
 - `plugins/`：具体模型插件，只 import Provider SDK。每个插件子目录都有 `README.md`（用法与契约）、`provider.py`（请求翻译与 submit/observe/cancel/read_artifact）
   和导出用 `__init__.py`；可绑定的插件另有 `manifest.py`（recipe、槽位、参数、设置）与 `plugin.py`（`plugin_instance` 安装工厂）：
   - `agy_image/`：AGY 图片生成/编辑。
@@ -24,7 +25,7 @@
   - `indextts2/`：IndexTTS2.5 参考音色克隆，语速与八维情感由 manifest 声明。
   - `whisper_asr/`：whisper.cpp 参考音频转写。
   - `qwen_image/`：Qwen Image 2.1（NoctQ V4）备选生图/改图，`skills/qwen-image-prompt-writing/` 随插件发布（含官方提示词模板）。
-  - `minimax_h3/`：MiniMax H3 插件；`manifest.py`、`plugin.py`、`requests.py`、`contracts.py`、`render.py`，以及 `fl2va/`、`ref2va/` HTTP 实现。
+  - `minimax_h3/`：MiniMax H3 插件；`manifest.py`、`plugin.py`、`nodes.py`（本地 Windows / Colab 运行节点路由）、`requests.py`、`contracts.py`、`render.py`，以及 `fl2va/`、`ref2va/` HTTP 实现。
     `prompt_contract.py`、`prompt_codec.py`、`prompt_payload.py`、`prompt_context.py` 负责插件专业格式（`context.shots` 按 Segment 覆盖顺序写入段内切镜软约束），`skills/h3-prompt-writing/` 随插件发布，经 `prompt_skills` 由 `video_prompt` 契约交付。`prompt_lint.py` 是插件的 `prompt_linter`，按官方结构检查对白唯一位置、对白标签、说话者、段落与引用，结果只作工作集软提示。
   - `seedvr2_7b_sharp_fp8/`：SeedVR2 视频超分。
   - `demucs_audio/`：Demucs 人声/背景分离。
@@ -44,7 +45,7 @@
 - `request_builders.py`：各路由请求校验与任务目录写入。
 - `strict_json.py`：严格 JSON 字段解析。
 - `sampling_progress.py`：采样步速与剩余时间估算。
-- `h3_request.py`：H3 runtime 内部请求 v5 的严格解析（任务目录内文件、20/8 步、Sage/SelfLift 开关、32 网格画布、17k+5 帧）。
+- `h3_request.py`：H3 runtime 内部请求 v6 的严格解析（任务目录内文件、基础模型与配套 20/8 步、Sage/SelfLift 开关、32 网格画布、17k+5 帧）。
 - `comfy_core/README.md`、`comfy_core/runtime.py`、`comfy_core/worker.py`：固定图 Comfy Core 运行时（通用初始化与 H3 FL2VA/Ref2VA 执行）与 JSONL 入口（H3 或 Qwen Image）。
 - `comfy_core/graph.py`：按 mode → 步数/权重 → 注意力 → SelfLift 现场构造并校验 H3 节点图。
 - `comfy_core/qwen_image.py`：Qwen Image 2.1（NoctQ V4）固定节点图、进度映射与 Comfy Core 执行。
@@ -60,6 +61,8 @@
 - `requirements-codex-image.txt`：私有图片服务依赖。
 - `macos/install_launch_agent.sh`、`macos/launch-agent.plist.template`、`macos/run_codex_server.sh`：Mac 媒体服务 LaunchAgent 安装与启动。
 - `macos/install_demucs.sh`：Demucs 独立虚拟环境安装。
+- `colab/setup.sh`：Colab VM 上安装固定 revision 的 ComfyUI 与 SelfLift、H3 依赖，并从 Drive 缓存权重、按 Windows 同名链接进 models。
+- `colab/run_server.sh`：Colab VM 上启停只含 H3 的模型服务（回环地址 + Bearer Token）。
 - `windows/install_scheduled_task.ps1`、`uninstall_scheduled_task.ps1`：Windows 计划任务安装与卸载。
 - `windows/run_server.ps1`：Windows 服务启动。
 - `windows/service_status.ps1`、`windows/stop_services.ps1`：状态查看与停止。
@@ -73,4 +76,5 @@
 - `provider_tests/golden/provider_requests/`、`golden_provider_requests.py`：经完整 Core 旅程录制的插件线上请求黄金文件与录制设施。
 - `provider_tests/fixtures/yue2/`：YuE2 乐谱夹具。
 - `scripts/check.sh`：本仓库工程门禁。
+- `scripts/colab_node.sh`：本机开关 Colab H3 节点（up 开机、同步代码与 Token、安装并启动服务；status；down 关机）。
 - `scripts/ref2va_acceptance.py`、`scripts/seedvr2_upscale_acceptance.py`：真实媒体服务验收。

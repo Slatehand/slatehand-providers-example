@@ -2,8 +2,21 @@
 
 from dataclasses import dataclass
 from math import ceil, isfinite
+from typing import Any
 
 H3_STEPS = (20, 8)
+# 基础模型 → 固定步数。DaSiWa Hybrid/Turbo V2 是 FL2VA 与 Ref2VA 共用的混合权重；
+# 官方 Pruned BF16 按 mode 各一份，由模型服务按 mode 选择。
+H3_BASE_MODELS = {"dasiwa_hybrid_v2": 20, "dasiwa_turbo_v2": 8, "official_pruned_bf16": 20}
+_DEFAULT_BASE_MODELS = {20: "dasiwa_hybrid_v2", 8: "dasiwa_turbo_v2"}
+
+
+def default_base_model(instance: Any) -> None:
+    """未给出基础模型时按步数取 DaSiWa 默认权重；在 frozen dataclass 的 __post_init__ 调用。"""
+    if instance.base_model is None:
+        object.__setattr__(instance, "base_model", _DEFAULT_BASE_MODELS.get(instance.steps))
+
+
 H3_FPS = 24
 _IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
 _32_MIB = 32 * 1024 * 1024
@@ -55,9 +68,13 @@ def _h3_canvas(width: int, height: int) -> None:
         raise ValueError("画布边长必须是 32 的倍数且在 256 到 1920 之间。")
 
 
-def _h3_sampling(steps: int, seed: int, cfg: float, sage_attention: bool, selflift: bool) -> None:
+def _h3_sampling(
+    base_model: str, steps: int, seed: int, cfg: float, sage_attention: bool, selflift: bool
+) -> None:
     if isinstance(steps, bool) or steps not in H3_STEPS:
         raise ValueError("H3 步数只允许 20 或 8。")
+    if H3_BASE_MODELS.get(base_model) != steps:
+        raise ValueError("H3 基础模型与步数不匹配。")
     if not 0 <= seed <= 2**63 - 1 or not 0 <= cfg <= 30:
         raise ValueError("采样参数不合法。")
     if not isinstance(sage_attention, bool) or not isinstance(selflift, bool):
@@ -134,8 +151,10 @@ class FL2VARequest:
     save_audio: bool = False
     sage_attention: bool = True
     selflift: bool = True
+    base_model: str | None = None
 
     def __post_init__(self) -> None:
+        default_base_model(self)
         if self.first_frame is None and self.last_frame is None:
             raise ValueError("H3 FL2VA 至少需要首帧或尾帧之一。")
         for frame in (self.first_frame, self.last_frame):
@@ -147,7 +166,9 @@ class FL2VARequest:
             raise ValueError("画布像素过大。")
         if not isfinite(self.duration_seconds) or self.duration_seconds < 0.2:
             raise ValueError("duration_seconds 必须是不短于 0.2 秒的有限数值。")
-        _h3_sampling(self.steps, self.seed, self.cfg, self.sage_attention, self.selflift)
+        _h3_sampling(
+            self.base_model, self.steps, self.seed, self.cfg, self.sage_attention, self.selflift
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,8 +188,10 @@ class Ref2VARequest:
     reference_videos: tuple[ReferenceVideo, ...] = ()
     sage_attention: bool = True
     selflift: bool = True
+    base_model: str | None = None
 
     def __post_init__(self) -> None:
+        default_base_model(self)
         if not any(
             (
                 self.first_frame,
@@ -206,4 +229,6 @@ class Ref2VARequest:
             raise ValueError("画布像素过大。")
         if not isfinite(self.duration_seconds) or self.duration_seconds < 0.2:
             raise ValueError("duration_seconds 必须是不短于 0.2 秒的有限数值。")
-        _h3_sampling(self.steps, self.seed, self.cfg, self.sage_attention, self.selflift)
+        _h3_sampling(
+            self.base_model, self.steps, self.seed, self.cfg, self.sage_attention, self.selflift
+        )

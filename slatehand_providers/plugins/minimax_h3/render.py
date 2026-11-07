@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from .contracts import H3_STEPS
+from .contracts import H3_BASE_MODELS, H3_STEPS, default_base_model
 
 
 class H3Resolution(StrEnum):
@@ -46,12 +46,16 @@ class H3RenderSettings:
     steps: int = 20
     sage_attention: bool = True
     selflift: bool = True
+    base_model: str | None = None
 
     def __post_init__(self) -> None:
+        default_base_model(self)
         if not isinstance(self.resolution, H3Resolution):
             raise ValueError("H3 分辨率只允许 480p、720p 或 1080p。")
         if isinstance(self.steps, bool) or self.steps not in H3_STEPS:
             raise ValueError("H3 步数只允许 20 或 8。")
+        if H3_BASE_MODELS.get(self.base_model) != self.steps:
+            raise ValueError("H3 基础模型与步数不匹配。")
         if not isinstance(self.sage_attention, bool) or not isinstance(self.selflift, bool):
             raise ValueError("H3 sage_attention 与 selflift 必须是布尔值。")
 
@@ -67,6 +71,7 @@ class H3RenderSettings:
             "steps": self.steps,
             "sage_attention": self.sage_attention,
             "selflift": self.selflift,
+            "base_model": self.base_model,
         }
 
     @classmethod
@@ -76,10 +81,17 @@ class H3RenderSettings:
             "steps",
             "sage_attention",
             "selflift",
+            "base_model",
         }:
             raise ValueError("H3 渲染设置字段不合法。")
         try:
             resolution = H3Resolution(value["resolution"])
         except ValueError as exc:
             raise ValueError("H3 分辨率只允许 480p、720p 或 1080p。") from exc
-        return cls(resolution, value["steps"], value["sage_attention"], value["selflift"])
+        return cls(
+            resolution,
+            value["steps"],
+            value["sage_attention"],
+            value["selflift"],
+            value["base_model"],
+        )

@@ -81,6 +81,15 @@ LAN 模式仍强制 Bearer Token。
 
 服务重装后继续监听指定 LAN 地址：未认证请求返回 401，带 Token 的模型路由可达，Windows 未启用的 Codex image 路由返回 404。
 
+### Colab H3 节点
+
+同一服务也可以在 Colab VM（Linux）上只启用 `h3_fl2va,h3_ref2va`：`colab/setup.sh` 安装与 Windows 相同 revision
+的 ComfyUI / comfyui-SelfLift 和 `sageattention==1.0.6`（保留 Colab 自带的 CUDA 版 torch），把 Drive 中的权重
+复制到本地盘，并按 Windows 节点相同的相对路径链接进 `ComfyUI/models`；`colab/run_server.sh` 以独立进程组在
+`127.0.0.1:8791` 启动服务，Token 来自 `/root/.slatehand-colab-token`。固定图里带子目录的模型名按宿主系统的
+路径分隔符生成，Windows 与 Linux 共用同一份 `comfy_core`。Colab 节点不启用控制租约，由 Mac 侧
+`scripts/colab_node.sh` 开关。
+
 ### H3 Runtime
 
 - 执行边界：FL2VA 与 Ref2VA 只通过 `comfy_core/` 在各自的隔离子进程内执行 Slatehand 现场构造的固定
@@ -89,12 +98,16 @@ LAN 模式仍强制 Bearer Token。
   输出路径。旧的原生 H3 worker 与独立 ComfyUI HTTP 回退路径已删除，不存在隐藏 fallback；
 - 部署固定：ComfyUI revision `a7169322`、`comfyui-SelfLift` revision `835c3cf7`，由安装脚本预检；
   Python 由管理员通过 `SLATEHAND_H3_PYTHON` 固定；
-- 组合项：请求（内部 v5）只能选择 mode（FL2VA/Ref2VA）、`steps`（20/8）、`sage_attention`、`selflift`
-  和画布；决策顺序为 mode → 步数/权重 → 注意力 → SelfLift：
-  - 20 步：`DasiwaMinimaxH3_dasiwaHybridV2_int8`；单阶段 `res_multistep`，SelfLift 时 `euler` 10+10；
-  - 8 步：`DasiwaMinimaxH3_dasiwaHybridTurboV2_int8`（独立权重，不叠加 Turbo LoRA）；`euler`，
-    SelfLift 时 4+4；
-  - 两种 mode 共用上述权重、NVFP4 Qwen3-VL 文本编码器、独立视频/音频 VAE，不再有 SigmaShift；
+- 组合项：请求（内部 v6）只能选择 mode（FL2VA/Ref2VA）、`base_model` 与配套 `steps`、`sage_attention`、
+  `selflift` 和画布；决策顺序为 mode → 基础模型/步数/权重 → 注意力 → SelfLift：
+  - `dasiwa_hybrid_v2`（20 步）：`DasiwaMinimaxH3_dasiwaHybridV2_int8`；单阶段 `res_multistep`，SelfLift 时
+    `euler` 10+10；
+  - `dasiwa_turbo_v2`（8 步）：`DasiwaMinimaxH3_dasiwaHybridTurboV2_int8`（独立权重，不叠加 Turbo LoRA）；
+    `euler`，SelfLift 时 4+4；
+  - `official_pruned_bf16`（20 步）：官方 `minimax_h3_{fl2va,ref2va}_pruned_bf16`，按 mode 各一份；采样同
+    20 步，与官方模板一致（`BasicGuider`、`res_multistep`/`simple`、无 shift）。只部署在 Colab 节点；节点缺少
+    所选权重时任务直接失败并说明，不回退到其它权重；
+  - 各基础模型共用 NVFP4 Qwen3-VL 文本编码器、独立视频/音频 VAE，不再有 SigmaShift；
   - `ModelAttentionBackend` 选 `sage attention` 或 `default attention`。Sage 不可用（未安装或 Triton 缓存
     不可写）时任务直接失败并说明原因，不回退到默认注意力，也不标成 Sage 成功；
   - SelfLift 固定 `cfg=1`、`lowres_scale=0.5`、`rho=0`、`w_min=0.5`、`w_max=1`、

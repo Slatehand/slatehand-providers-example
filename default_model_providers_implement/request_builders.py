@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from .h3_request import BASE_MODELS as H3_BASE_MODELS
 from .h3_request import SCHEMA as H3_RUNTIME_SCHEMA
 from .h3_request import STEPS as H3_STEPS
 from .qwen_image_request import MAX_IMAGES as QWEN_MAX_IMAGES
@@ -165,7 +166,7 @@ def prepare_h3_fl2va(payload: Any):
     )
     canvas = object_fields(data["canvas"], required={"width", "height"})
     sampling = object_fields(
-        data["sampling"], required={"steps", "cfg", "sage_attention", "selflift"}
+        data["sampling"], required={"steps", "base_model", "cfg", "sage_attention", "selflift"}
     )
     common = _h3_common(
         prompt=data["prompt"],
@@ -174,6 +175,7 @@ def prepare_h3_fl2va(payload: Any):
         duration=data["seconds"],
         seed=data["seed"],
         steps=sampling["steps"],
+        base_model=sampling["base_model"],
         cfg=sampling["cfg"],
         sage_attention=sampling["sage_attention"],
         selflift=sampling["selflift"],
@@ -215,6 +217,7 @@ def prepare_h3_ref2va(payload: Any):
             "duration_s",
             "random_seed",
             "step_count",
+            "base_model",
             "guidance",
             "sage_attention",
             "selflift",
@@ -230,6 +233,7 @@ def prepare_h3_ref2va(payload: Any):
         duration=data["duration_s"],
         seed=data["random_seed"],
         steps=data["step_count"],
+        base_model=data["base_model"],
         cfg=data["guidance"],
         sage_attention=data["sage_attention"],
         selflift=data["selflift"],
@@ -524,6 +528,7 @@ def _h3_common(
     duration: Any,
     seed: Any,
     steps: Any,
+    base_model: Any,
     cfg: Any,
     sage_attention: Any,
     selflift: Any,
@@ -536,6 +541,9 @@ def _h3_common(
     steps_value = integer(steps, "steps", minimum=8, maximum=20)
     if steps_value not in H3_STEPS:
         raise RequestError("H3 steps 只允许 20 或 8。")
+    base_model_value = string(base_model, "base_model", maximum=64)
+    if H3_BASE_MODELS.get(base_model_value) != steps_value:
+        raise RequestError("H3 base_model 不受支持或与 steps 不匹配。")
     return {
         "prompt": string(prompt, "prompt", maximum=20_000),
         "width": width_value,
@@ -543,6 +551,7 @@ def _h3_common(
         "duration_seconds": number(duration, "duration", minimum=0.2, maximum=15),
         "seed": integer(seed, "seed", minimum=0, maximum=2**63 - 1),
         "steps": steps_value,
+        "base_model": base_model_value,
         "cfg": number(cfg, "cfg", minimum=0, maximum=30),
         "sage_attention": boolean(sage_attention, "sage_attention"),
         "selflift": boolean(selflift, "selflift"),

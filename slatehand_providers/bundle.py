@@ -3,7 +3,8 @@
 部署配置来自 Provider 目录下的 ``provider.local.env`` 与 ``var/secrets/``（见 ``deployment``）。
 安装顺序决定未显式绑定时的默认实现：Codex 先于 AGY 与 Qwen Image（生图/改图），
 Stable Audio 3 先于 YuE2（文生音频），Breeze 先于 IndexTTS2.5（声音克隆）。
-随 Core 启停的服务依次为：Windows 模型服务（经 SSH）、Windows 控制租约、Mac LaunchAgent、Whisper。
+随 Core 启停的服务依次为：Windows 模型服务（经 SSH）、Windows 控制租约、Colab 隧道、
+Mac LaunchAgent、Whisper。H3 可同时接入 Windows 与 Colab 两个节点，由插件设置选择新提交的节点。
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ from slatehand_providers.plugins.stable_audio_3.plugin import (
 from slatehand_providers.plugins.whisper_asr.plugin import plugin_instance as whisper_asr_plugin
 from slatehand_providers.plugins.yue2.plugin import plugin_instance as yue2_plugin
 
+from .colab_tunnel import ColabTunnelService
 from .deployment import Deployment, read_deployment
 from .services import MacProviderService, WhisperService, WindowsProviderService
 from .windows_runtime_lease import WindowsRuntimeLease
@@ -52,6 +54,13 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
         plugins.append(whisper_asr_plugin(deployment.whisper_endpoint))
     else:
         print("未发现本机 Whisper ASR 与模型；Breeze 参考文字仍可手工填写。", flush=True)
+    colab = deployment.colab
+    h3_nodes = {}
+    if colab is not None:
+        h3_nodes["colab"] = (
+            colab.endpoint,
+            UrllibTransport({"Authorization": "Bearer " + colab.token}),
+        )
     windows = deployment.windows
     if windows is not None:
         authorized = UrllibTransport({"Authorization": "Bearer " + windows.token})
@@ -64,13 +73,17 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
             services.append(WindowsProviderService(windows))
         services.append(WindowsRuntimeLease(windows.endpoint, windows.token))
         plugins += [
-            minimax_h3_plugin(windows.endpoint, authorized),
+            minimax_h3_plugin(windows.endpoint, authorized, nodes=h3_nodes),
             seedvr2_plugin(windows.endpoint, authorized),
             stable_audio_3_plugin(windows.endpoint, authorized),
             yue2_plugin(windows.endpoint, authorized),
             qwen_image_plugin(windows.endpoint, authorized),
             indextts2_plugin(windows.endpoint, authorized),
         ]
+    if windows is None and colab is not None:
+        plugins.append(minimax_h3_plugin(nodes=h3_nodes))
+    if colab is not None:
+        services.append(ColabTunnelService(colab))
     if deployment.mac_autostart and sys.platform == "darwin":
         services.append(MacProviderService(context.provider_directory / MAC_INSTALL_SCRIPT, mac))
     if deployment.whisper_server is not None and deployment.whisper_model is not None:

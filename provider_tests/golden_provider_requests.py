@@ -461,6 +461,7 @@ class GoldenProviders:
                 "resolution": resolution,
                 "sage_attention": sage_attention,
                 "selflift": selflift,
+                "node": "windows",
             },
         )
 

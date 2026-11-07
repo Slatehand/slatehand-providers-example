@@ -69,7 +69,7 @@ class H3RequestSchemaTests(unittest.TestCase):
         for index in range(videos):
             (root / f"video-{index + 1}.mp4").write_bytes(b"x")
         value = {
-            "schema": "slatehand_h3_runtime_request_v5",
+            "schema": "slatehand_h3_runtime_request_v6",
             "mode": "ref2va",
             "prompt": "A red car moves toward the flag.",
             "width": 832,
@@ -77,6 +77,7 @@ class H3RequestSchemaTests(unittest.TestCase):
             "duration_seconds": duration,
             "seed": 42,
             "steps": 20,
+            "base_model": "dasiwa_hybrid_v2",
             "cfg": 1.0,
             "sage_attention": True,
             "selflift": True,
@@ -133,6 +134,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                     "duration_s": 3,
                     "random_seed": 42,
                     "step_count": 20,
+                    "base_model": "dasiwa_hybrid_v2",
                     "guidance": 1,
                     "sage_attention": True,
                     "selflift": False,
@@ -142,7 +144,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                 }
             )(record)
             request = json.loads((root / "request.json").read_text())
-            self.assertEqual(request["schema"], "slatehand_h3_runtime_request_v5")
+            self.assertEqual(request["schema"], "slatehand_h3_runtime_request_v6")
             self.assertEqual(request["additional_images"], ["additional-1.png"])
             self.assertEqual((root / "additional-1.png").read_bytes(), base64.b64decode(png))
 
@@ -165,6 +167,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                     "duration_s": 3,
                     "random_seed": 42,
                     "step_count": 20,
+                    "base_model": "dasiwa_hybrid_v2",
                     "guidance": 1,
                     "sage_attention": True,
                     "selflift": False,
@@ -221,6 +224,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                     "duration_s": 3,
                     "random_seed": 42,
                     "step_count": 20,
+                    "base_model": "dasiwa_hybrid_v2",
                     "guidance": 1,
                     "sage_attention": True,
                     "selflift": False,
@@ -252,6 +256,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                         "duration_s": 3,
                         "random_seed": 42,
                         "step_count": 20,
+                        "base_model": "dasiwa_hybrid_v2",
                         "guidance": 1,
                         "sage_attention": True,
                         "selflift": False,
@@ -280,6 +285,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                     "duration_s": 3,
                     "random_seed": 42,
                     "step_count": 20,
+                    "base_model": "dasiwa_hybrid_v2",
                     "guidance": 1,
                     "sage_attention": True,
                     "selflift": False,
@@ -293,7 +299,7 @@ class H3RequestSchemaTests(unittest.TestCase):
             )(record)
 
             request = json.loads((root / "request.json").read_text())
-            self.assertEqual(request["schema"], "slatehand_h3_runtime_request_v5")
+            self.assertEqual(request["schema"], "slatehand_h3_runtime_request_v6")
             self.assertEqual(request["reference_videos"], ["video-1.mp4", "video-2.mp4"])
             self.assertEqual((root / "video-1.mp4").read_bytes(), base64.b64decode(mp4_first))
             self.assertEqual((root / "video-2.mp4").read_bytes(), base64.b64decode(mp4_second))
@@ -314,6 +320,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                     "duration_s": 3,
                     "random_seed": 42,
                     "step_count": 20,
+                    "base_model": "dasiwa_hybrid_v2",
                     "guidance": 1,
                     "sage_attention": True,
                     "selflift": False,
@@ -340,6 +347,7 @@ class H3RequestSchemaTests(unittest.TestCase):
                     "duration_s": 3,
                     "random_seed": 42,
                     "step_count": 20,
+                    "base_model": "dasiwa_hybrid_v2",
                     "guidance": 1,
                     "sage_attention": True,
                     "selflift": False,
@@ -429,17 +437,31 @@ class H3RequestSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "至少需要"):
             parse_request(path)
 
-    def test_v5_carries_steps_sage_and_selflift(self) -> None:
+    def test_v6_carries_steps_base_model_sage_and_selflift(self) -> None:
         request = self._request(first=True, last=False)
         self.assertEqual(
-            (request.steps, request.sage_attention, request.selflift), (20, True, True)
+            (request.steps, request.base_model, request.sage_attention, request.selflift),
+            (20, "dasiwa_hybrid_v2", True, True),
         )
+
+    def test_base_model_must_be_known_and_match_steps(self) -> None:
+        request = self._request(first=True, last=False)
+        path = request.task_dir / "request.json"
+        value = json.loads(path.read_text())
+        value["base_model"] = "official_pruned_bf16"
+        path.write_text(json.dumps(value))
+        self.assertEqual(parse_request(path).base_model, "official_pruned_bf16")
+        for base_model, steps in (("official_pruned_bf16", 8), ("dasiwa_turbo_v2", 20), ("x", 20)):
+            value["base_model"], value["steps"] = base_model, steps
+            path.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "base_model"):
+                parse_request(path)
 
     def test_only_twenty_or_eight_steps_are_accepted(self) -> None:
         request = self._request(first=True, last=False)
         path = request.task_dir / "request.json"
         value = json.loads(path.read_text())
-        value["steps"] = 8
+        value["steps"], value["base_model"] = 8, "dasiwa_turbo_v2"
         path.write_text(json.dumps(value))
         self.assertEqual(parse_request(path).steps, 8)
         for steps in (12, True):
@@ -476,7 +498,13 @@ class H3RequestSchemaTests(unittest.TestCase):
             "canvas": {"width": 1280, "height": 704},
             "seconds": 3,
             "seed": 1,
-            "sampling": {"steps": 8, "cfg": 1, "sage_attention": False, "selflift": True},
+            "sampling": {
+                "steps": 8,
+                "base_model": "dasiwa_turbo_v2",
+                "cfg": 1,
+                "sage_attention": False,
+                "selflift": True,
+            },
             "include_audio": True,
             "opening_frame": {"mime": "image/png", "base64": png},
             "closing_frame": None,

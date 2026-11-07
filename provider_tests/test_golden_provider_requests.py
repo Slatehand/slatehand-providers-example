@@ -628,9 +628,9 @@ def test_project_provider_requests(golden_server: GoldenHttpServer) -> None:
     assert videos[0]["provider"] == {
         "plugin_id": "minimax_h3",
         "recipe_id": "minimax_h3.ref2va",
-        "summary": "DaSiWa Hybrid V2 · 20 步 · 720p · Sage · SelfLift",
+        "summary": "DaSiWa Hybrid V2 · 20 步 · 720p · Sage · SelfLift · 本地 Windows",
     }
-    assert videos[-1]["provider"]["summary"] == "Turbo V2 · 8 步 · 1080p"
+    assert videos[-1]["provider"]["summary"] == "Turbo V2 · 8 步 · 1080p · 本地 Windows"
     assert {
         item["provider"]["plugin_id"]
         for item in generations

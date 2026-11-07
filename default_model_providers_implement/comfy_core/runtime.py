@@ -18,6 +18,7 @@ from default_model_providers_implement.sampling_progress import SamplingProgress
 
 from .graph import (
     DIFFUSION_LABELS,
+    DIFFUSION_MODELS,
     GRAPH_NODE_TYPES,
     SAVE_NODE_ID,
     H3GraphInputs,
@@ -443,6 +444,12 @@ class ComfyCoreH3Runtime(ComfyCoreRuntime):
         for old in output_dir.glob(f"{request_id}_*.mp4"):
             old.unlink()
 
+        weights = DIFFUSION_MODELS[request.base_model][request.mode]
+        if self.folder_paths.get_full_path("diffusion_models", weights) is None:
+            raise RuntimeError(
+                f"本节点未部署 {DIFFUSION_LABELS[request.base_model]} 权重（{weights}）；"
+                "请换基础模型预设或运行节点。"
+            )
         workflow = build_h3_workflow(
             H3GraphInputs(
                 mode=request.mode,
@@ -452,6 +459,7 @@ class ComfyCoreH3Runtime(ComfyCoreRuntime):
                 frame_count=request.frame_count,
                 seed=request.seed,
                 steps=request.steps,
+                base_model=request.base_model,
                 sage_attention=request.sage_attention,
                 selflift=request.selflift,
                 filename_prefix=f"slatehand/{request_id}",
@@ -538,7 +546,7 @@ def effective_summary(request: Request) -> str:
     return (
         f"H3 {request.mode.upper()} · {request.width}×{request.height} · "
         f"{request.frame_count} 帧 24fps（{_format_seconds(request.frame_count)} 秒，"
-        f"请求 {request.duration_seconds:g} 秒）· {DIFFUSION_LABELS[request.steps]} · "
+        f"请求 {request.duration_seconds:g} 秒）· {DIFFUSION_LABELS[request.base_model]} · "
         f"{sampler_name(request.steps, request.selflift)} {sampling} · "
         f"{'Sage' if request.sage_attention else '默认'}注意力"
     )

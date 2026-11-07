@@ -108,6 +108,27 @@ sequenceDiagram
 提供 `create_bundle(context) -> ProviderBundle`，从 `context.provider_directory` 读取自己的配置。步骤与代码骨架见
 Core 仓库的 `slatehand-provider-plugin` Skill（`.agents/skills/slatehand-provider-plugin/`）。
 
+## Colab H3 节点
+
+H3 可同时接入本地 Windows 与 Colab（G4，RTX PRO 6000 96 GB）两个节点，在 Provider 设置页的「运行节点」
+切换。切换只影响新提交；运行中的任务按句柄回到提交时的节点，两个节点互不排斥。
+
+- 接入条件：`var/secrets/colab-model-service-token` 存在，且 `provider.local.env` 设置 `SLATEHAND_COLAB_SESSION`。
+  Core 运行期间由 bundle 服务维持 `colab ssh` 隧道（本机 `127.0.0.1:18791` → VM `127.0.0.1:8791`）。
+  只在 `colab sessions` 列出该会话时才连接，避免 `colab ssh` 自动开出新的计费 VM；会话不在线时 Core 照常启动，
+  只是 Colab 节点的提交会连接失败。
+- 开关节点（需要已安装并登录 [Colab CLI](https://github.com/googlecolab/google-colab-cli)）：
+
+  ```bash
+  ./scripts/colab_node.sh up      # 缺会话时开 G4；同步代码与 Token，安装、缓存权重并启动服务
+  ./scripts/colab_node.sh status
+  ./scripts/colab_node.sh down    # colab stop 回收 VM；Drive 里的权重不受影响
+  ```
+
+  Drive 挂载需要人工授权：`up` 发现未挂载时会提示先在终端运行 `colab drivemount -s <会话>`。
+- 权重放在 Drive 的 `MyDrive/model/minimax-h3/`（与 Windows 节点同一套 DaSiWa Hybrid V2 / Turbo V2 int8、
+  NVFP4 文本编码器、视频/音频 VAE 与 SelfLift 放大器），`setup.sh` 每次开机复制到 VM 本地盘后加载。
+
 ## Breeze-TTS-2 接入
 
 默认部署用 `SLATEHAND_BREEZE_ENDPOINT`（默认同 Windows 服务地址）连接同一受认证模型服务；Breeze runtime 由 `exclusive_gpu` 调度器按需启动，不会在开机时加载，也不会与 H3 同时驻留。它仍复用已有的 WSL 中已有的 `breeze-tts/.venv` 和模型目录，不会 clone、创建 venv、安装依赖或使用 Docker。手工启动官方 API 仅用于兼容旧部署：

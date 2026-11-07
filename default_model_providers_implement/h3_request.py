@@ -13,9 +13,11 @@ from pathlib import Path
 from typing import Any
 
 FPS = 24
-SCHEMA = "slatehand_h3_runtime_request_v5"
+SCHEMA = "slatehand_h3_runtime_request_v6"
 MODES = frozenset({"fl2va", "ref2va"})
 STEPS = frozenset({8, 20})
+# 基础模型 → 固定步数；具体权重文件由 comfy_core.graph 按 mode 选择。
+BASE_MODELS = {"dasiwa_hybrid_v2": 20, "dasiwa_turbo_v2": 8, "official_pruned_bf16": 20}
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +31,7 @@ class Request:
     frame_count: int
     seed: int
     steps: int
+    base_model: str
     cfg: float
     sage_attention: bool
     selflift: bool
@@ -57,6 +60,7 @@ def parse_request(path: Path) -> Request:
         "duration_seconds",
         "seed",
         "steps",
+        "base_model",
         "cfg",
         "sage_attention",
         "selflift",
@@ -100,6 +104,8 @@ def parse_request(path: Path) -> Request:
         raise ValueError("H3 seed 不合法。")
     if isinstance(steps, bool) or steps not in STEPS:
         raise ValueError("H3 steps 只允许 20 或 8。")
+    if BASE_MODELS.get(data["base_model"]) != steps:
+        raise ValueError("H3 base_model 不受支持或与 steps 不匹配。")
     if isinstance(cfg, bool) or not isinstance(cfg, (int, float)) or not 0 <= cfg <= 30:
         raise ValueError("H3 cfg 不合法。")
     for flag in ("save_audio", "sage_attention", "selflift"):
@@ -145,6 +151,7 @@ def parse_request(path: Path) -> Request:
         frame_count=count,
         seed=seed,
         steps=steps,
+        base_model=data["base_model"],
         cfg=float(cfg),
         sage_attention=data["sage_attention"],
         selflift=data["selflift"],

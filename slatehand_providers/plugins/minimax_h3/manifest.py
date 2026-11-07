@@ -21,10 +21,16 @@ from core.model_providers.manifest import (
     seed_field,
 )
 
+from slatehand_providers.plugins.minimax_h3.contracts import H3_BASE_MODELS
+from slatehand_providers.plugins.minimax_h3.nodes import DEFAULT_NODE, NODE_LABELS
 from slatehand_providers.plugins.minimax_h3.render import H3RenderSettings, H3Resolution
 
 # 预设把“基础模型 + 步数”绑在一起，避免分开选择出非法组合。
-_PRESET_STEPS = {"hybrid_v2": 20, "turbo_v2": 8}
+_PRESETS = {
+    "hybrid_v2": "dasiwa_hybrid_v2",
+    "turbo_v2": "dasiwa_turbo_v2",
+    "official_pruned_bf16": "official_pruned_bf16",
+}
 
 _PARAMS = (
     prompt_field(20_000, "H3 提示词"),
@@ -55,6 +61,7 @@ MANIFEST = PluginManifest(
             options=(
                 Option("hybrid_v2", "DaSiWa Hybrid V2 · 20 步"),
                 Option("turbo_v2", "Turbo V2 · 8 步"),
+                Option("official_pruned_bf16", "官方 Pruned BF16 · 20 步"),
             ),
             summary=True,
         ),
@@ -75,6 +82,15 @@ MANIFEST = PluginManifest(
             summary_label="Sage",
         ),
         Field("selflift", Widget.TOGGLE, "SelfLift", default=True, summary=True),
+        # 只影响新提交；运行中的任务按句柄回到提交时的节点。
+        Field(
+            "node",
+            Widget.ENUM,
+            "运行节点",
+            default=DEFAULT_NODE,
+            options=tuple(Option(key, label) for key, label in NODE_LABELS.items()),
+            summary=True,
+        ),
     ),
     hints=(("soft_duration_limit_seconds", 15),),
     recipes=(
@@ -156,9 +172,11 @@ MANIFEST = PluginManifest(
 def render_settings(values: dict[str, object]) -> H3RenderSettings:
     """插件设置 → 提交时使用的渲染组合（画布、步数与开关）。"""
     settings = MANIFEST.validate_settings(values)
+    base_model = _PRESETS[settings["preset"]]
     return H3RenderSettings(
         H3Resolution(settings["resolution"]),
-        _PRESET_STEPS[settings["preset"]],
+        H3_BASE_MODELS[base_model],
         settings["sage_attention"],
         settings["selflift"],
+        base_model,
     )

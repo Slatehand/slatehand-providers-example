@@ -6,21 +6,39 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any
 
 SAVE_NODE_ID = "14"
 SAMPLER_NODE_ID = "12"
 
-# 两种 mode 共用 DaSiWa 权重；Turbo V2 已是独立 8 步权重，不再叠加 Turbo LoRA。
+
+def _subdir(name: str) -> str:
+    """ComfyUI 按宿主系统的路径分隔符列出子目录模型（Windows 节点与 Linux/Colab 节点同图）。"""
+    return "minimax-h3" + os.sep + name
+
+
+# 基础模型 → mode → 权重。DaSiWa Hybrid 两种 mode 共用一份；Turbo V2 已是独立 8 步权重，不再叠加
+# Turbo LoRA。官方 Pruned BF16 按 mode 各一份，沿用官方模板的 20 步 res_multistep、无 shift。
+_HYBRID = _subdir("DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors")
+_TURBO = _subdir("DasiwaMinimaxH3_dasiwaHybridTurboV2_int8.safetensors")
 DIFFUSION_MODELS = {
-    20: "minimax-h3\\DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors",
-    8: "minimax-h3\\DasiwaMinimaxH3_dasiwaHybridTurboV2_int8.safetensors",
+    "dasiwa_hybrid_v2": {"fl2va": _HYBRID, "ref2va": _HYBRID},
+    "dasiwa_turbo_v2": {"fl2va": _TURBO, "ref2va": _TURBO},
+    "official_pruned_bf16": {
+        "fl2va": _subdir("minimax_h3_fl2va_pruned_bf16.safetensors"),
+        "ref2va": _subdir("minimax_h3_ref2va_pruned_bf16.safetensors"),
+    },
 }
-DIFFUSION_LABELS = {20: "DaSiWa Hybrid V2", 8: "DaSiWa Hybrid Turbo V2"}
+DIFFUSION_LABELS = {
+    "dasiwa_hybrid_v2": "DaSiWa Hybrid V2",
+    "dasiwa_turbo_v2": "DaSiWa Hybrid Turbo V2",
+    "official_pruned_bf16": "官方 Pruned BF16",
+}
 TEXT_ENCODER = "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
-VIDEO_VAE = "minimax-h3\\minimax_h3_video_vae_fp16.safetensors"
-AUDIO_VAE = "minimax-h3\\minimax_h3_audio_vae_fp32.safetensors"
+VIDEO_VAE = _subdir("minimax_h3_video_vae_fp16.safetensors")
+AUDIO_VAE = _subdir("minimax_h3_audio_vae_fp32.safetensors")
 # SelfLift 节点只接受 latent_upscale_models 下的文件名。
 LATENT_UPSCALER = "minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors"
 SELFLIFT_FIXED_INPUTS = {
@@ -73,6 +91,7 @@ class H3GraphInputs:
     sage_attention: bool
     selflift: bool
     filename_prefix: str
+    base_model: str
     first_image: str | None
     last_image: str | None
     additional_images: tuple[str, ...] = ()
@@ -83,8 +102,10 @@ class H3GraphInputs:
     def __post_init__(self) -> None:
         if self.mode not in {"fl2va", "ref2va"}:
             raise ValueError("H3 mode 只允许 fl2va 或 ref2va。")
-        if self.steps not in DIFFUSION_MODELS:
+        if self.steps not in {20, 8}:
             raise ValueError("H3 steps 只允许 20 或 8。")
+        if self.base_model not in DIFFUSION_MODELS:
+            raise ValueError("H3 基础模型不受支持。")
         if self.mode == "fl2va" and self.first_image is None and self.last_image is None:
             raise ValueError("H3 FL2VA workflow 至少需要一个时间锚点。")
         if self.mode == "ref2va" and not any(
@@ -123,7 +144,10 @@ def build_h3_workflow(inputs: H3GraphInputs) -> dict[str, Any]:
     workflow: dict[str, Any] = {
         "3": {
             "class_type": "UNETLoader",
-            "inputs": {"unet_name": DIFFUSION_MODELS[inputs.steps], "weight_dtype": "default"},
+            "inputs": {
+                "unet_name": DIFFUSION_MODELS[inputs.base_model][inputs.mode],
+                "weight_dtype": "default",
+            },
         },
         "4": {
             "class_type": "ModelAttentionBackend",

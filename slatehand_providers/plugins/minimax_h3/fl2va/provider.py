@@ -14,7 +14,11 @@ from core.model_providers.boundary import (
 )
 from core.model_providers.http import HttpTransport, UrllibTransport, require_keys, require_success
 
-from slatehand_providers.plugins.minimax_h3.contracts import FL2VARequest
+from slatehand_providers.plugins.minimax_h3.contracts import (
+    H3_BASE_MODELS,
+    FL2VARequest,
+    default_base_model,
+)
 from slatehand_providers.plugins.minimax_h3.requests import to_request as recipe_to_request
 
 
@@ -44,8 +48,10 @@ class MiniMaxH3FL2VARequest:
     save_audio: bool = False
     sage_attention: bool = True
     selflift: bool = True
+    base_model: str | None = None
 
     def __post_init__(self) -> None:
+        default_base_model(self)
         if self.first_frame is None and self.last_frame is None:
             raise ValueError("H3 FL2VA 至少需要首帧或尾帧之一。")
         _validate_h3_fields(self)
@@ -69,6 +75,7 @@ def to_request(contract: FL2VARequest) -> MiniMaxH3FL2VARequest:
         contract.save_audio,
         contract.sage_attention,
         contract.selflift,
+        contract.base_model,
     )
 
 
@@ -93,6 +100,7 @@ class MiniMaxH3FL2VAProvider:
             "seed": request.seed,
             "sampling": {
                 "steps": request.steps,
+                "base_model": request.base_model,
                 "cfg": request.cfg,
                 "sage_attention": request.sage_attention,
                 "selflift": request.selflift,
@@ -193,6 +201,8 @@ def _validate_h3_fields(request: MiniMaxH3FL2VARequest) -> None:
         raise ValueError("duration_seconds 必须是不短于 0.2 秒的有限数值。")
     if isinstance(request.steps, bool) or request.steps not in {20, 8}:
         raise ValueError("H3 步数只允许 20 或 8。")
+    if H3_BASE_MODELS.get(request.base_model) != request.steps:
+        raise ValueError("H3 基础模型与步数不匹配。")
     if not 0 <= request.seed <= 2**63 - 1 or not 0 <= request.cfg <= 30:
         raise ValueError("采样参数不合法。")
     if not isinstance(request.sage_attention, bool) or not isinstance(request.selflift, bool):

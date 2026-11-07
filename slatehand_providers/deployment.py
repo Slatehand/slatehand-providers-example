@@ -15,6 +15,8 @@ from urllib.parse import urlsplit
 
 ENV_FILE = "provider.local.env"
 TOKEN_FILE = Path("var/secrets/windows-model-service-token")
+COLAB_TOKEN_FILE = Path("var/secrets/colab-model-service-token")
+COLAB_LOCAL_PORT = 18791
 WHISPER_MODEL = Path("var/whisper-asr/ggml-large-v3-turbo-q5_0.bin")
 WHISPER_PORT = 8793
 
@@ -31,6 +33,9 @@ KEYS = frozenset(
         "SLATEHAND_WINDOWS_REPOSITORY_ROOT",
         "SLATEHAND_WINDOWS_LISTEN_ADDRESS",
         "SLATEHAND_BREEZE_ENDPOINT",
+        "SLATEHAND_COLAB_SESSION",
+        "SLATEHAND_COLAB_LOCAL_PORT",
+        "SLATEHAND_COLAB_CLI",
     }
 )
 
@@ -48,6 +53,20 @@ class WindowsDeployment:
 
 
 @dataclass(frozen=True, slots=True)
+class ColabDeployment:
+    """Colab GPU 节点：Core 经 ``colab ssh`` 隧道把本机回环端口转发到 VM 上的模型服务。"""
+
+    session: str
+    local_port: int
+    token: str
+    cli: str = "colab"
+
+    @property
+    def endpoint(self) -> str:
+        return f"http://127.0.0.1:{self.local_port}"
+
+
+@dataclass(frozen=True, slots=True)
 class Deployment:
     mac_endpoint: str
     mac_autostart: bool
@@ -56,6 +75,7 @@ class Deployment:
     whisper_server: Path | None
     whisper_model: Path | None
     windows: WindowsDeployment | None
+    colab: ColabDeployment | None = None
 
 
 def read_deployment(directory: Path, environ: Mapping[str, str] = os.environ) -> Deployment:
@@ -83,6 +103,7 @@ def read_deployment(directory: Path, environ: Mapping[str, str] = os.environ) ->
         whisper_server=whisper_server,
         whisper_model=whisper_model,
         windows=_windows(directory, values),
+        colab=_colab(directory, values),
     )
 
 
@@ -117,6 +138,26 @@ def _windows(directory: Path, values: dict[str, str]) -> WindowsDeployment | Non
             "不需要时设 SLATEHAND_AUTOSTART_WINDOWS_PROVIDER=0。"
         )
     return WindowsDeployment(windows, token, breeze, *remote.values())
+
+
+def _colab(directory: Path, values: dict[str, str]) -> ColabDeployment | None:
+    """只在存在 Colab Token 文件时接入 Colab 节点。"""
+    token_path = directory / COLAB_TOKEN_FILE
+    if not token_path.is_file():
+        return None
+    session = values.get("SLATEHAND_COLAB_SESSION", "").strip()
+    if not session or not session.replace("-", "").replace("_", "").isalnum():
+        raise ValueError(
+            f"已有 {COLAB_TOKEN_FILE}，但 {ENV_FILE} 的 SLATEHAND_COLAB_SESSION 缺失或不合法。"
+        )
+    port = values.get("SLATEHAND_COLAB_LOCAL_PORT", str(COLAB_LOCAL_PORT))
+    if not port.isdigit() or not 1024 <= int(port) <= 65535:
+        raise ValueError("SLATEHAND_COLAB_LOCAL_PORT 必须是 1024–65535 的端口号。")
+    token = token_path.read_text(encoding="ascii").strip()
+    if not 32 <= len(token) <= 512:
+        raise ValueError("Colab Provider token 长度不合法。")
+    cli = values.get("SLATEHAND_COLAB_CLI") or shutil.which("colab") or "colab"
+    return ColabDeployment(session, int(port), token, cli)
 
 
 def endpoint(value: str | None, label: str) -> str | None:

@@ -9,8 +9,19 @@ def test_h3_preset_binds_base_model_and_steps() -> None:
     assert render_settings(H3_MANIFEST.default_settings()) == H3RenderSettings()
     turbo = {**H3_MANIFEST.default_settings(), "preset": "turbo_v2", "resolution": "1080p"}
     assert render_settings(turbo) == H3RenderSettings(H3Resolution.P1080, 8, True, True)
-    assert H3_MANIFEST.settings_summary(turbo) == "Turbo V2 · 8 步 · 1080p · Sage · SelfLift"
+    assert H3_MANIFEST.settings_summary(turbo) == (
+        "Turbo V2 · 8 步 · 1080p · Sage · SelfLift · 本地 Windows"
+    )
     assert H3_MANIFEST.hint("soft_duration_limit_seconds") == 15
+
+
+def test_official_pruned_bf16_preset_is_twenty_steps_with_its_own_base_model() -> None:
+    official = {**H3_MANIFEST.default_settings(), "preset": "official_pruned_bf16"}
+    render = render_settings(official)
+    assert (render.steps, render.base_model) == (20, "official_pruned_bf16")
+    assert render_settings(H3_MANIFEST.default_settings()).base_model == "dasiwa_hybrid_v2"
+    assert H3RenderSettings.from_json(render.to_json()) == render
+    assert H3_MANIFEST.settings_summary(official).startswith("官方 Pruned BF16 · 20 步")
 
 
 def test_h3_render_canvas_tiers_follow_the_32_pixel_grid() -> None:

@@ -181,6 +181,7 @@
       },
       "prompt": "行李箱在站台上缓慢滑动。",
       "sampling": {
+        "base_model": "dasiwa_hybrid_v2",
         "cfg": 1.0,
         "sage_attention": true,
         "selflift": true,
@@ -212,6 +213,7 @@
       "opening_frame": null,
       "prompt": "镜头停在清晨的站台。",
       "sampling": {
+        "base_model": "dasiwa_hybrid_v2",
         "cfg": 1.0,
         "sage_attention": true,
         "selflift": false,
@@ -256,6 +258,7 @@
           "media_type": "audio/wav"
         }
       ],
+      "base_model": "dasiwa_turbo_v2",
       "direction": "<Picture 1> 到 <Picture 2>，<Picture 3> 的道具保持可见，<Audio 1> 作为环境声。",
       "duration_s": 6.0,
       "first_reference": {
@@ -320,6 +323,7 @@
           "media_type": "audio/wav"
         }
       ],
+      "base_model": "dasiwa_hybrid_v2",
       "direction": "<Picture 1> 中 <Picture 2> 的人物用 <Audio 1> 的声音独白。",
       "duration_s": 4.0,
       "first_reference": {
@@ -359,6 +363,7 @@
       ],
       "audio": true,
       "audio_references": [],
+      "base_model": "dasiwa_hybrid_v2",
       "direction": "<Picture 1> 结束在 <Picture 2> 的道具特写。",
       "duration_s": 3.0,
       "first_reference": null,
@@ -398,6 +403,7 @@
           "media_type": "audio/wav"
         }
       ],
+      "base_model": "dasiwa_hybrid_v2",
       "direction": "空旷站台上，一盏顶灯轻微闪烁。",
       "duration_s": 3.0,
       "first_reference": null,

@@ -27,6 +27,7 @@ def to_request(request: RecipeRequest):
         save_audio=True,
         sage_attention=render.sage_attention,
         selflift=render.selflift,
+        base_model=render.base_model,
     )
     if request.recipe_id == "minimax_h3.fl2va":
         return FL2VARequest(

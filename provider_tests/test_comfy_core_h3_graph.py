@@ -18,6 +18,8 @@ from default_model_providers_implement.comfy_core.graph import (
 from default_model_providers_implement.comfy_core.runtime import _execution_error, effective_summary
 from default_model_providers_implement.h3_request import parse_request
 
+DEFAULT_BASE_MODELS = {20: "dasiwa_hybrid_v2", 8: "dasiwa_turbo_v2"}
+
 
 def _inputs(mode: str, steps: int, sage: bool, selflift: bool, **extra) -> H3GraphInputs:
     values = {
@@ -28,6 +30,7 @@ def _inputs(mode: str, steps: int, sage: bool, selflift: bool, **extra) -> H3Gra
         "frame_count": 73,
         "seed": 7,
         "steps": steps,
+        "base_model": DEFAULT_BASE_MODELS.get(steps, "dasiwa_hybrid_v2"),
         "sage_attention": sage,
         "selflift": selflift,
         "filename_prefix": "slatehand/task",
@@ -50,7 +53,10 @@ class ComfyCoreH3GraphTests(unittest.TestCase):
             with self.subTest(mode=mode, steps=steps, sage=sage, selflift=selflift):
                 workflow = build_h3_workflow(_inputs(mode, steps, sage, selflift))
                 types = _types(workflow)
-                self.assertEqual(workflow["3"]["inputs"]["unet_name"], DIFFUSION_MODELS[steps])
+                self.assertEqual(
+                    workflow["3"]["inputs"]["unet_name"],
+                    DIFFUSION_MODELS[DEFAULT_BASE_MODELS[steps]][mode],
+                )
                 self.assertEqual(
                     workflow["4"]["inputs"],
                     {
@@ -70,6 +76,18 @@ class ComfyCoreH3GraphTests(unittest.TestCase):
                 self.assertEqual(types["17"], "VAEDecodeAudio")
                 self.assertEqual(workflow["15"]["inputs"]["fps"], 24)
                 self.assertEqual(types[SAVE_NODE_ID], "SaveVideo")
+
+    def test_official_pruned_bf16_uses_one_checkpoint_per_mode(self) -> None:
+        names = {
+            mode: build_h3_workflow(
+                _inputs(mode, 20, True, False, base_model="official_pruned_bf16")
+            )["3"]["inputs"]["unet_name"]
+            for mode in ("fl2va", "ref2va")
+        }
+        self.assertTrue(names["fl2va"].endswith("minimax_h3_fl2va_pruned_bf16.safetensors"))
+        self.assertTrue(names["ref2va"].endswith("minimax_h3_ref2va_pruned_bf16.safetensors"))
+        with self.assertRaises(ValueError):
+            _inputs("fl2va", 20, True, False, base_model="unknown")
 
     def test_twenty_steps_single_stage_uses_res_multistep(self) -> None:
         workflow = build_h3_workflow(_inputs("fl2va", 20, True, False))
@@ -222,7 +240,7 @@ class EffectiveSummaryTests(unittest.TestCase):
         root = Path(directory.name)
         (root / "first.png").write_bytes(b"x")
         value = {
-            "schema": "slatehand_h3_runtime_request_v5",
+            "schema": "slatehand_h3_runtime_request_v6",
             "mode": "fl2va",
             "prompt": "A red car.",
             "width": 1920,
@@ -230,6 +248,7 @@ class EffectiveSummaryTests(unittest.TestCase):
             "duration_seconds": 15,
             "seed": 1,
             "steps": 8,
+            "base_model": "dasiwa_turbo_v2",
             "cfg": 1.0,
             "sage_attention": True,
             "selflift": True,
