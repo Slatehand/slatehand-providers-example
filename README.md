@@ -137,7 +137,9 @@ H3 与 Breeze TTS 2 可同时接入本地 Windows 与 Colab（G4，RTX PRO 6000 
   只是 Colab 节点的提交会连接失败。
 - 开关节点由人手动管理，用 `scripts/colab_node.sh`（需要已安装并登录
   [Colab CLI](https://github.com/googlecolab/google-colab-cli)）。`up` 依次开 G4、同步本仓库 `default_model_providers_implement/` 与 Token，再在 VM 上运行 `colab/setup.sh` 与
-  `colab/run_server.sh start`；`down` 回收 VM。Core 不启停 VM、不对 Colab 维持租约。
+  `colab/run_server.sh start`，最后进入状态面板；代码未变化且服务在运行时跳过部署与重启，不打断运行中的任务。
+  `status` 打印一次、`watch` 持续刷新状态面板（`colab/node_status.py` 汇报模型服务、GPU 显存与利用率、各权重
+  是否就绪、任务数与后台下载进度，本机补充 Core 隧道是否连通）；`down` 回收 VM。Core 不启停 VM、不对 Colab 维持租约。
   每台 Colab 运行时同时只允许一个 `colab ssh` 连接，Core 运行时由隧道占用，所以脚本的远程命令走 kernel 通道
   （`colab exec`）、文件走 `colab upload`，Core 开着也能开机部署；手工 `colab ssh` 调试需先停 Core。
 - 权重每次开机都从固定 commit 的 Hugging Face 仓库下载到 VM 本地盘，不需要 Google Drive：与 Windows 节点
