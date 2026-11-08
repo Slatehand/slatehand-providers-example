@@ -7,7 +7,11 @@ license = "Apache-2.0"
 dependencies = ["slatehand"]
 
 [project.optional-dependencies]
-services = ["pillow>=10,<13", "numpy>=1.26,<3"]
+services = [
+    "pillow>=10,<13",
+    "numpy>=1.26,<3",
+    "openai-codex>=0.147,<0.148; sys_platform == 'darwin'",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -296,4 +296,4 @@ Core 的 `project.json` 只保存插件翻译后、项目恢复所需的观察�
 
 ## 私有图片服务安装边界
 
-Core 的 CodexImageProvider 与 AgyImageProvider 都只调用 HTTP，不安装 Agent SDK/CLI。私有 `codex_worker.py` 的生图执行仍需要独立环境中的 Codex SDK/Pillow，可使用 `pip install -r default_model_providers_implement/requirements-codex-image.txt`；`agy_worker.py` 另要求宿主 PATH 中存在已认证的 `agy`。这是保留的媒体 Provider 实现，不是 Director/Compiler Agent runtime；用户外部 Agent 的安装与认证不受影响。
+Core 的 CodexImageProvider 与 AgyImageProvider 都只调用 HTTP，不安装 Agent SDK/CLI。私有 `codex_worker.py` 的生图执行需要 Codex SDK/Pillow：Mac 上安装本仓库 `.[services]` 时已包含，默认用服务自身的 `.venv` 运行；也可在独立环境中执行 `pip install -r default_model_providers_implement/requirements-codex-image.txt`，再用 `SLATEHAND_CODEX_PYTHON` 指向该环境的 Python。`agy_worker.py` 另要求宿主 PATH 中存在已认证的 `agy`。这是保留的媒体 Provider 实现，不是 Director/Compiler Agent runtime；用户外部 Agent 的安装与认证不受影响。
