@@ -386,7 +386,7 @@ def test_project_provider_requests(golden_server: GoldenHttpServer) -> None:
         item["segment_id"]: item["active_recipe"].removeprefix("minimax_h3.")
         for item in snap["video_plan"]["segments"]
     }
-    assert modes == {first_segment: "ref2va", second_segment: "fl2va", narration_segment: "fl2va"}
+    assert modes == {first_segment: "ref2va", second_segment: "ref2va", narration_segment: "ref2va"}
 
     journey.step("video.ref2va")
     reference_image = journey.upload_image("upload:站牌字样.png", "keyframe")
@@ -435,11 +435,16 @@ def test_project_provider_requests(golden_server: GoldenHttpServer) -> None:
     )
 
     journey.step("video.fl2va")
-    # 旁白 Segment 不传 seed，录制 Core 的默认 seed 派生。
+    # 默认部署一律默认 Ref2VA；这里显式切到 FL2VA 覆盖无额外参考的首尾帧线上请求。
     for segment_id, seed, prompt in (
         (second_segment, "1002", "小满松开拉杆，转身望向轨道尽头。"),
         (narration_segment, None, "固定机位观察入夜站台，站灯轻微闪烁。"),
     ):
+        journey._put(
+            "video_recipe",
+            f"{journey.resource}/segments/{segment_id}/videos/recipe",
+            {"expected_revision": journey._revision(), "recipe_id": "minimax_h3.fl2va"},
+        )
         journey._put(
             "video_plan",
             f"{journey.resource}/segments/{segment_id}/videos/inputs",

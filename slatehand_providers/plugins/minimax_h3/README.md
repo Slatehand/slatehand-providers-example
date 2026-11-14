@@ -5,7 +5,7 @@
 
 - `manifest.py`：设置（基础模型预设 Hybrid V2 · 20 步 / Turbo V2 · 8 步 / 官方 Pruned BF16 · 20 步、分辨率 480p/720p/1080p、
   SageAttention、SelfLift、运行节点 本地 Windows / Colab G4）、`soft_duration_limit_seconds = 15` 提示、两个 recipe 的槽位与参数，以及
-  “有对白默认 Ref2VA”的默认规则；`render_settings` 把实例设置换算成提交时的画布与采样组合。
+  默认优先 `minimax_h3.ref2va` 的默认规则（`minimax_h3.fl2va` 供无需任何额外参考时选用）；`render_settings` 把实例设置换算成提交时的画布与采样组合。
 - `plugin.py`：`plugin_instance(endpoint, transport, nodes=...)` 构造可安装的插件实例：`endpoint` 是默认的
   本地 Windows 节点，`nodes` 追加其它节点（目前为 `colab`）。
 - `../nodes.py`（与 Breeze 共用）：`NodeRouter` 把同一 recipe 在各节点上的实现包成一个实现。新提交按设置 `node` 选节点；

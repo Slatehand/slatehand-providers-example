@@ -32,7 +32,7 @@
 | E4a | YuE2-3B 歌曲生成使用风格描述 1–1000 字、歌词 ≤4000 字（可空）与 seed，产物为 48 kHz 立体声 WAV，只供 Playground；乐谱、CFG 与采样参数不进入请求；歌词为空时模型服务把内部乐谱的人声旋律移到器乐声部、记谱超过 300 秒时保留首末段删去中间整段后再生成，有歌词时不改谱。 | `slatehand_providers/plugins/yue2/`；`default_model_providers_implement/yue2_worker.py`、`yue2_instrumental/` | `test_yue2_provider.py`（含真实模型乐谱 fixture） |
 | E5 | Whisper ASR 接受 WAV 与 auto/zh/en，同步返回文字，不产生 Asset。 | `slatehand_providers/plugins/whisper_asr/`；`core/structured_director/service.py` | `test_whisper_asr_provider.py`、黄金 multipart |
 | G4 | 所有插件拒绝 plugin_id 或版本不匹配的句柄。 | 各插件 `provider.py` 的句柄校验 | `test_model_provider_contract.py`、各插件测试 |
-| H3 | H3 的官方格式 Skill 与参考文本位于 minimax_h3 插件包。 | `slatehand_providers/plugins/minimax_h3/skills/h3-prompt-writing/` | `test_h3_prompt_writer.py`、`test_consistency_contract.py` |
+| H3 | H3 默认优先 `minimax_h3.ref2va`；官方格式 Skill 与角色视觉锚点规范位于 `minimax_h3` 插件包。 | `slatehand_providers/plugins/minimax_h3/manifest.py`、`skills/h3-prompt-writing/` | `test_h3_prompt_skill.py`、`test_h3_prompt_writer.py`、`test_golden_provider_requests.py` |
 | J1 | 插件包安装后声明声音克隆、语速 0.5–2 与八维情感 −1–1；无 Core 领域或 Web 专用实现。 | `slatehand_providers/plugins/indextts2/` | `test_indextts2_provider.py::test_plugin_loads_playground_vector_form_and_preserves_historical_request`、`::test_narration_uses_new_plugin_without_domain_changes` |
 | J2 | 模型 HTTP 请求体、五种状态、取消、回收、句柄与响应严格校验。 | `slatehand_providers/plugins/indextts2/` | `test_indextts2_provider.py::test_observe_translates_all_phases`、`::test_invalid_observation_is_rejected`、`::test_cancel_artifact_and_handle_boundaries` |
 | J3 | Windows 服务路由、封闭内部请求、63 位 seed 与中英语言映射。 | `default_model_providers_implement/{server.py,request_builders.py,indextts2_worker.py,runners.py}` | `test_indextts2_runtime.py` |

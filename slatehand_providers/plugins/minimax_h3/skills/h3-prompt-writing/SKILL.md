@@ -38,16 +38,22 @@ Read `references/ref-en.txt` for label rules, retention analysis, and complete e
 - Describe each shot by composition, subjects, environment, actions, camera, sound, and the exact point where referenced content appears.
 - Avoid plot summaries, unresolved reference labels, and timing that does not match the requested duration.
 
-## Slatehand Ref2VA 参考素材绑定
+## Slatehand 优先 Ref2VA 与参考素材绑定
 
-手工绑定只在用户本轮明确要求时进行（例如“再参考这段环境声”“参考那条视频的运镜”），通过 `save_video_prompt` 的 `recipe_inputs` 保存；以工作集 `recipe_inputs` 为起点，未被要求的绑定原样保留。对白 TTS WAV 与其他参考共用 `recipe_inputs` 的显式音频列表。用户明确要求添加本段对白时，将 `dialogue_audio` 草稿或 `bindable_assets` 中已选对白保存到列表；未明确要求时不补齐。生成入口会拒绝缺失的对白引用，不会隐式注入音频。
+一律优先推荐与使用 `minimax_h3.ref2va`；`minimax_h3.fl2va` 只在无对白、无音频/视频参考，且已选首尾帧已完整呈现本段全部可见角色所需外观（正脸、全身服装）或纯空镜、确实没必要用 Ref2VA 时才考虑选用。当前若停在 `minimax_h3.fl2va` 而本段需要角色参考图或对白音频，直接用 `set_video_recipe` 切换到 `minimax_h3.ref2va`（用户本轮明确要求保持 FL2VA 时除外）；切回 FL2VA 前必须先清空下列槽位。
 
-- FL2VA 没有可显式绑定的槽位；需要参考素材时先经用户同意切到 `minimax_h3.ref2va`。切回 FL2VA 前必须先清空下列槽位。
-- `additional_images`：最多 4 张图片，例如角色参考图、用户显式选择的地点图片；说明写它定义的主体或环境。
+生关键帧时用过的角色设定图**不会**自动进入视频输入。写正文或生成前，先用 `read_media_input` 看已选首尾帧并核对工作集 `character_visuals`，满足任一条就**主动绑定该角色匹配的已选造型设定图**（`looks[].selected_asset_id`）：
+
+1. **首尾帧没有该角色**（`in_enabled_keyframes=false`、`unanchored_characters` 非空，例如首帧只有角色 A、后续段内切镜到角色 B，或角色 B 中途入画）；
+2. **首尾帧只有该角色的局部、背影、侧影、远小轮廓或遮挡**（例如首帧只有手部或道具局部，后续运镜拉远露全身或转正露脸；或首帧只见半身、后续起身露全身），否则视频模型会随机生成五官或服装。
+
+先用 `read_media_input` 看过该造型图，再用 `select_reference_image(source="asset", ...)` 或 `save_video_prompt` 的 `recipe_inputs` 绑入 `additional_images`（含对白时通常带 `attach_dialogue_audio: true` 自动合并已选对白 WAV）。其它非角色造型的手工参考（参考视频、手动环境声/音色、额外道具或地点图）以及替换/移除用户已有手动绑定，只在用户本轮明确要求时修改；以工作集 `recipe_inputs` 为起点，无关绑定原样保留。
+
+- `additional_images`：最多 4 张图片（角色造型设定图、同场锚点关键帧或用户显式选择的地点/道具图）；说明写明它定义的主体或环境。绑定角色造型设定图时，**不为该 `<Picture K>` 单独写时间帧定义行**，而是在 `subject_definitions` 的 `<Subject N>` 行内引用它，明确只提取人物面部五官、发型、体型与全身服装造型，**忽略设定图的浅灰背景与多视角排版**（若是首帧局部拉全身，合并两个来源写明：起势局部状态来自首帧 `<Picture 1>`，拉远/转正后露出的面部与全身服装来自 `<Picture K>`）；`summary` 的任务类型包含 `reference generation`（有边界帧时写 `[keyframe completion + reference generation]`，含对白音频再加 `+ audio reuse`）。
 - `reference_audios`：最多 3 条 WAV（官方 ComfyUI 节点上限）；对白超过 3 句的 Segment 需拆分，或由用户决定只绑定其中几句。已选对白 TTS 按剧本顺序占用前面的 Audio 标签；其余名额才用于用户显式添加的音色、环境声或原声参考。系统对白音频来自 DialoguePlan，不从角色卡参考音色直接推导。
 - `reference_videos`：最多 3 条 2–15 秒 MP4，只参考画面；说明运镜、节奏或动作用途。
 - 每项说明必填且 Asset 不重复；Ref2VA 可无图片，但五类媒体槽至少一项；`params` 传 `{}`。
-- 绑定变化后正文要引用新标签时，重读工作集，用新的 `actual_provider_inputs` 标签写正文。
+- 绑定变化后正文要引用新标签时，以保存回执 `data.asset_inputs` 或重读工作集的 `actual_provider_inputs` 标签写正文，并确认 `unanchored_characters` 清零。
 
 ## Slatehand 对白写法
 
@@ -105,7 +111,7 @@ H3 只能输出 24fps 下 17k+5 帧，请求时长会向上取整（例如请求
 
 - 先看 `context.shots` 的数量。只有一项时，Segment 是连续镜头：4 秒以上写 2~3 个连续阶段（起势 → 物理交互与阻力 → 落点或悬念），不虚构段内切镜，也不为凑节拍硬写切镜。
 - 有多项时，按数组顺序写 `[Shot 1]`、`[Shot 2] At MM:SS.mmm …`。切点按各 Shot 的构图、动作与 `duration_seconds` 的比例估算；它只是软约束：Core 不按 Shot 切视频、不记录段内切点，生成后切点漂移仍是合格候选，由人挑选或重生成，不因此判定失败。
-- 首尾 Picture 只锚定第一个 Shot 的开头与最后一个 Shot 的结尾；中间 Shot 的人物身份、服装与空间关系靠参考图与已批准关键帧维持。Ref2VA 时优先建议用户为可见角色绑定造型图，但只在用户明确要求时修改绑定。
+- 首尾 Picture 只锚定第一个 Shot 的开头与最后一个 Shot 的结尾；后续切镜或中途入画的人物身份、服装，以及首帧仅拍到局部而后续拉远露全身/正脸的角色外观，都必须按“优先 Ref2VA 与参考素材绑定”主动绑入角色造型设定图来维持。
 - 同一个 Segment 的段内切镜数当前不超过 3 个；需要更多切镜时先向用户说明并建议拆成多个 Segment。
 - 每个 `shots[]` 带 `visible_character_names`；由它决定该镜谁入画。空间以已批准关键帧、Shot 描述和 Scene 地点语义为准，不存在 Shot 级地点图片绑定。
 - `segment.continues_from_previous_segment` / `continues_into_next_segment` 表示相邻 Segment 共享边界 Shot（延续同一镜头）：开头或结尾沿用同一空间、人物状态与光线，不重新建立场景；两者都为 false 时按独立剪辑处理。

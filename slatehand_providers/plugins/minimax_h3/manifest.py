@@ -8,7 +8,6 @@ from core.model_providers.manifest import (
     IMAGE_MEDIA_TYPES,
     Capability,
     DefaultRule,
-    DomainPredicate,
     Field,
     Option,
     PluginManifest,
@@ -152,10 +151,7 @@ MANIFEST = PluginManifest(
     defaults=(
         (
             Capability.VIDEO_GENERATE,
-            (
-                DefaultRule("minimax_h3.ref2va", DomainPredicate.SEGMENT_HAS_DIALOGUE),
-                DefaultRule("minimax_h3.fl2va"),
-            ),
+            (DefaultRule("minimax_h3.ref2va"),),
         ),
     ),
 )
