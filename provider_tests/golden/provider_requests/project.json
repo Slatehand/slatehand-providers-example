@@ -251,7 +251,7 @@
   {
     "body": {
       "cfg_scale": 4.0,
-      "instruction": "年轻、克制、语速偏慢",
+      "instruction": "年轻、克制、语速偏慢\n\n本句表演（以此为准，覆盖上文关于语速、语调与情绪的描述）：轻声，带一点迟疑",
       "reference_transcript": null,
       "seed": "<随机 seed：每次对白 Generation 独立分配>",
       "text": "还会来吗？",
