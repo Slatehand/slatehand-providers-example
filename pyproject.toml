@@ -21,6 +21,7 @@ build-backend = "setuptools.build_meta"
 include = ["slatehand_providers*", "default_model_providers_implement*"]
 
 [tool.setuptools.package-data]
+"slatehand_providers.plugins.codex_image" = ["skills/*/SKILL.md"]
 "slatehand_providers.plugins.minimax_h3" = ["skills/*/SKILL.md", "skills/*/LICENSE", "skills/*/NOTICE", "skills/*/references/*.md", "skills/*/references/*.txt", "skills/*/agents/*.yaml"]
 "slatehand_providers.plugins.qwen_image" = ["skills/*/SKILL.md", "skills/*/LICENSE", "skills/*/NOTICE", "skills/*/references/*.txt", "skills/*/agents/*.yaml"]
 "slatehand_providers.plugins.yue2" = ["skills/*/SKILL.md", "skills/*/LICENSE", "skills/*/NOTICE", "skills/*/references/*.md", "skills/*/references/*.txt"]

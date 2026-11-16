@@ -19,7 +19,7 @@
 - `plugins/`：具体模型插件，只 import Provider SDK。每个插件子目录都有 `README.md`（用法与契约）、`provider.py`（请求翻译与 submit/observe/cancel/read_artifact）
   和导出用 `__init__.py`；可绑定的插件另有 `manifest.py`（recipe、槽位、参数、设置）与 `plugin.py`（`plugin_instance` 安装工厂）：
   - `agy_image/`：AGY 图片生成/编辑。
-  - `codex_image/`：Codex 图片生成/编辑。
+  - `codex_image/`：Codex 图片生成/编辑；`prompt_lint.py` 返回格式软提示，`skills/codex-image-prompt-writing/` 随包交付模型写作规范。
   - `nodes.py`：H3 与 Breeze 共用的运行节点路由（本地 Windows / Colab，设置 `node` 选择新提交的节点）。
   - `breeze_tts2/`：Breeze TTS 2 音色设计与克隆/导演。
   - `indextts2/`：IndexTTS2.5 参考音色克隆，语速与八维情感由 manifest 声明。

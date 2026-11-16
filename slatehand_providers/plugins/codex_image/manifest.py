@@ -13,6 +13,8 @@ from core.model_providers.manifest import (
     prompt_field,
 )
 
+SKILL = "codex-image-prompt-writing"
+
 MANIFEST = PluginManifest(
     plugin_id="codex_image",
     plugin_version=1,
@@ -32,6 +34,7 @@ MANIFEST = PluginManifest(
                 ),
             ),
             params=(prompt_field(20_000), image_aspect_ratio_field()),
+            skills=(SKILL,),
         ),
         Recipe(
             "codex_image.edit",
@@ -54,6 +57,7 @@ MANIFEST = PluginManifest(
                 ),
             ),
             params=(prompt_field(20_000), image_aspect_ratio_field()),
+            skills=(SKILL,),
             distinct_slots=("source_image", "reference_image"),
         ),
     ),

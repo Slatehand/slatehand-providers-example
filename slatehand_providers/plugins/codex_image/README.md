@@ -10,4 +10,4 @@
 两种请求各有严格类型和插件 ID，但共用状态观察与 Artifact 读取实现。插件把外部状态和图片产物转换为
 Core 内部类型，不负责依赖调度、图片审核、候选选择或项目资产登记。
 
-`manifest.py` 声明槽位与参数，`plugin.py` 提供安装工厂。实现通过 `submit_recipe` 接收 Core 校验后的通用请求，再翻译为本插件 HTTP DTO。
+`manifest.py` 声明槽位、参数与随附 Skill（`codex-image-prompt-writing`），`plugin.py` 提供安装工厂并注册提示词 Skill 与非阻塞软检查器（`prompt_lint.py`）。实现通过 `submit_recipe` 接收 Core 校验后的通用请求，再翻译为本插件 HTTP DTO。
