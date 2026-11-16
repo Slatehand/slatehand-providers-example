@@ -552,21 +552,21 @@ def test_ref2va_request_constructs() -> None:
                 "房间",
                 (),
                 first_frame=_reference_image(),
-                additional_frames=(_reference_image(),) * 5,
+                additional_frames=(_reference_image(),) * 10,
             ),
-            "Ref2VA 附加参考图必须是最多 4 项的图片元组。",
+            "Ref2VA 附加参考图必须是最多 9 项的图片元组。",
         ),
         (
             lambda: Ref2VARequest(
                 "房间", (), first_frame=_reference_image(), additional_frames=[_reference_image()]
             ),
-            "Ref2VA 附加参考图必须是最多 4 项的图片元组。",
+            "Ref2VA 附加参考图必须是最多 9 项的图片元组。",
         ),
         (
             lambda: Ref2VARequest(
                 "房间", (), first_frame=_reference_image(), additional_frames=(_image(),)
             ),
-            "Ref2VA 附加参考图必须是最多 4 项的图片元组。",
+            "Ref2VA 附加参考图必须是最多 9 项的图片元组。",
         ),
         (
             lambda: Ref2VARequest(

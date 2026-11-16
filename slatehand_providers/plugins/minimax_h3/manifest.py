@@ -47,6 +47,14 @@ _FRAME_SLOTS = (
     Slot("last_frame", Role.LAST_FRAME, "尾帧", media_types=IMAGE_MEDIA_TYPES, namespace="picture"),
 )
 
+
+def _check_ref2va_inputs(inputs, _settings):
+    # Core 在构造请求时调用，早于 Generation 创建与 Provider 提交。
+    count = sum(len(inputs[key]) for key in ("first_frame", "last_frame", "additional_images"))
+    if count > 9:
+        raise ValueError(f"Ref2VA 实际使用的首尾帧与参考图合计 {count} 张，不能超过 9 张。")
+
+
 MANIFEST = PluginManifest(
     plugin_id="minimax_h3",
     plugin_version=2,
@@ -105,7 +113,7 @@ MANIFEST = PluginManifest(
                     "additional_images",
                     Role.REFERENCE_IMAGE,
                     "附加图片",
-                    maximum=4,
+                    maximum=9,
                     media_types=IMAGE_MEDIA_TYPES,
                     describe="required",
                     namespace="picture",
@@ -146,6 +154,7 @@ MANIFEST = PluginManifest(
                 ("video", "<Video {n}>"),
             ),
             skills=("h3-prompt-writing",),
+            input_check=_check_ref2va_inputs,
         ),
     ),
     defaults=(

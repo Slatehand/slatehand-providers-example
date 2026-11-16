@@ -114,11 +114,13 @@ def parse_request(path: Path) -> Request:
     first = _task_file(task_dir, data["first_image"])
     last = _task_file(task_dir, data["last_image"])
     raw_additional_images = data["additional_images"]
-    if not isinstance(raw_additional_images, list) or len(raw_additional_images) > 4:
+    if not isinstance(raw_additional_images, list) or len(raw_additional_images) > 9:
         raise ValueError("H3 附加参考图列表不合法。")
     additional_images = tuple(
         _required_task_image(task_dir, name) for name in raw_additional_images
     )
+    if int(first is not None) + int(last is not None) + len(additional_images) > 9:
+        raise ValueError("H3 实际使用的首尾帧与参考图合计不能超过 9 张。")
     raw_reference_audios = data["reference_audios"]
     if not isinstance(raw_reference_audios, list) or len(raw_reference_audios) > 3:
         raise ValueError("H3 参考音频列表不合法。")

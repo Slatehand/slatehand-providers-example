@@ -103,10 +103,10 @@ class H3PromptContext:
             self.start_frame_description is None or self.end_frame_description is None
         ):
             raise ValueError("FL2VA 必须提供首尾帧描述。")
-        if len(self.additional_image_descriptions) > 4 or any(
+        if len(self.additional_image_descriptions) > 9 or any(
             not item.strip() or len(item) > 2_000 for item in self.additional_image_descriptions
         ):
-            raise ValueError("Ref2VA 附加图片描述不能为空、超过 2000 字或多于 4 项。")
+            raise ValueError("Ref2VA 附加图片描述不能为空、超过 2000 字或多于 9 项。")
         if self.additional_image_descriptions and self.mode is not H3PromptMode.REF2VA:
             raise ValueError("附加图片描述只适用于 Ref2VA。")
         # 条数上限由 recipe 槽位在保存与提交时校验；旧项目可能已保存超额绑定，只读工作集仍须可读。

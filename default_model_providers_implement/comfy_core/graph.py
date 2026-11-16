@@ -122,8 +122,15 @@ class H3GraphInputs:
             self.additional_images or self.reference_audios or self.reference_videos
         ):
             raise ValueError("FL2VA workflow 不接受附加参考图、参考音频或参考视频。")
-        if len(self.additional_images) > 4 or any(not item for item in self.additional_images):
-            raise ValueError("Ref2VA workflow 最多支持 4 张附加参考图。")
+        if len(self.additional_images) > 9 or any(not item for item in self.additional_images):
+            raise ValueError("Ref2VA workflow 最多支持 9 张附加参考图。")
+        if (
+            int(self.first_image is not None)
+            + int(self.last_image is not None)
+            + len(self.additional_images)
+            > 9
+        ):
+            raise ValueError("H3 实际使用的首尾帧与参考图合计不能超过 9 张。")
         if len(self.reference_audios) > 3 or any(not item for item in self.reference_audios):
             raise ValueError("Ref2VA workflow 最多支持 3 条参考音频。")
         if len(self.reference_videos) > 3 or any(not item for item in self.reference_videos):

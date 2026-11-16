@@ -137,7 +137,7 @@ LAN 模式仍强制 Bearer Token。
 - 输出：固定图 `SaveVideo` 产出 MP4，runtime 校验后复制到任务目录。
 
 Ref2VA 使用官方 `MiniMaxH3ReferenceToVideo`：所选首帧、尾帧按顺序映射为 `<Picture 1>`、
-`<Picture 2>`，随后按 Core 顺序追加最多 4 张视频附加参考图；Segment 可不提供参考音频，也可把显式选择的参考音频按相同稳定顺序映射为 `ref_audio_N`，并与 Prompt 的 `<Audio N>` 对应。已添加音频的用途完全由对应的必填说明表达。Core 还可按稳定顺序提供最多 3 条 2–15 秒参考视频，内部请求落盘为 `video-N.mp4` 并与 Prompt 的 `<Video N>` 对应；worker 解码抽帧后经 video VAE 编码为 `kind: "video"` 参考条件（位于图片之后、音频之前），不引入其音轨。Prompt 中的时间对齐语句负责让边界参考图接近精确地落到目标
+`<Picture 2>`，随后按 Core 顺序追加最多 9 张视频附加参考图（与实际使用的首尾帧合计不超过 9 张）；Segment 可不提供参考音频，也可把显式选择的参考音频按相同稳定顺序映射为 `ref_audio_N`，并与 Prompt 的 `<Audio N>` 对应。已添加音频的用途完全由对应的必填说明表达。Core 还可按稳定顺序提供最多 3 条 2–15 秒参考视频，内部请求落盘为 `video-N.mp4` 并与 Prompt 的 `<Video N>` 对应；worker 解码抽帧后经 video VAE 编码为 `kind: "video"` 参考条件（位于图片之后、音频之前），不引入其音轨。Prompt 中的时间对齐语句负责让边界参考图接近精确地落到目标
 首尾时刻；这是已验证的 H3 用法，不修改官方 latent。Provider 保留首尾槽位的
 业务语义，但不把模型的提示词服从性宣称为像素级硬约束。
 

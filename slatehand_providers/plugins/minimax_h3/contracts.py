@@ -207,10 +207,17 @@ class Ref2VARequest:
                 raise ValueError("参考图片类型不受支持。")
         if (
             not isinstance(self.additional_frames, tuple)
-            or len(self.additional_frames) > 4
+            or len(self.additional_frames) > 9
             or any(not isinstance(item, ReferenceImage) for item in self.additional_frames)
         ):
-            raise ValueError("Ref2VA 附加参考图必须是最多 4 项的图片元组。")
+            raise ValueError("Ref2VA 附加参考图必须是最多 9 项的图片元组。")
+        image_count = (
+            int(self.first_frame is not None)
+            + int(self.last_frame is not None)
+            + len(self.additional_frames)
+        )
+        if image_count > 9:
+            raise ValueError("Ref2VA 实际使用的首尾帧与参考图合计不能超过 9 张。")
         if (
             not isinstance(self.reference_audios, tuple)
             or len(self.reference_audios) > 3

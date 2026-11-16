@@ -242,10 +242,17 @@ def prepare_h3_ref2va(payload: Any):
     additional_references = data["additional_references"]
     if (
         not isinstance(additional_references, list)
-        or len(additional_references) > 4
+        or len(additional_references) > 9
         or any(item is None for item in additional_references)
     ):
-        raise RequestError("Ref2VA additional_references 必须是最多 4 项的数组。")
+        raise RequestError("Ref2VA additional_references 必须是最多 9 项的数组。")
+    image_count = (
+        int(data["first_reference"] is not None)
+        + int(data["last_reference"] is not None)
+        + len(additional_references)
+    )
+    if image_count > 9:
+        raise RequestError("Ref2VA 实际使用的首尾帧与参考图合计不能超过 9 张。")
     audios = data["audio_references"]
     if not isinstance(audios, list) or len(audios) > 3:
         raise RequestError("Ref2VA audio_references 必须是最多 3 项的数组。")

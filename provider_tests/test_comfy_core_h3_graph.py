@@ -46,6 +46,41 @@ def _types(workflow: dict) -> dict[str, str]:
 
 
 class ComfyCoreH3GraphTests(unittest.TestCase):
+    def test_nine_images_preserve_order_and_tenth_is_rejected(self) -> None:
+        for first, last in (
+            (None, None),
+            ("first.png", None),
+            (None, "last.png"),
+            ("first.png", "last.png"),
+        ):
+            additional = tuple(
+                f"other-{i}.png" for i in range(9 - int(first is not None) - int(last is not None))
+            )
+            inputs = _inputs(
+                "ref2va",
+                20,
+                True,
+                True,
+                first_image=first,
+                last_image=last,
+                additional_images=additional,
+            )
+            workflow = build_h3_workflow(inputs)
+            pictures = [image for image in (first, last, *additional) if image is not None]
+            for index, image in enumerate(pictures):
+                node_id = workflow["7"]["inputs"][f"ref_images.ref_image_{index}"][0]
+                self.assertEqual(workflow[node_id]["inputs"]["image"], image)
+            with self.assertRaisesRegex(ValueError, "9 张"):
+                _inputs(
+                    "ref2va",
+                    20,
+                    True,
+                    True,
+                    first_image=first,
+                    last_image=last,
+                    additional_images=(*additional, "extra.png"),
+                )
+
     def test_every_combination_builds_a_closed_graph(self) -> None:
         for mode, steps, sage, selflift in itertools.product(
             ("fl2va", "ref2va"), (20, 8), (True, False), (True, False)

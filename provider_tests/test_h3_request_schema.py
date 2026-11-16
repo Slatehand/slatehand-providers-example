@@ -94,6 +94,15 @@ class H3RequestSchemaTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         return request
 
+    def test_image_budget_counts_only_actual_boundary_images(self) -> None:
+        for first, last in ((False, False), (True, False), (False, True), (True, True)):
+            additional = 9 - int(first) - int(last)
+            with self.subTest(first=first, last=last):
+                request = self._request(first=first, last=last, additional=additional)
+                self.assertEqual(len(request.additional_images), additional)
+                with self.assertRaisesRegex(ValueError, "附加参考图|不能超过 9 张"):
+                    self._request(first=first, last=last, additional=additional + 1)
+
     def test_frame_count_aligns_to_17k_plus_5(self) -> None:
         request = self._request(first=True, last=False)
         self.assertEqual((request.frame_count - 5) % 17, 0)
