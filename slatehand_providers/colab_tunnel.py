@@ -3,7 +3,7 @@
 Colab 会话由人按需开关，不随 Core 启停，因此 ``start()`` 不等待隧道可用、也不因会话缺席而失败：
 后台线程只在 ``colab sessions`` 列出目标会话时才建立 SSH 转发（``colab ssh --proxy-mode`` 遇到缺席
 会话会自动开新 VM，先确认可避免误开计费机器），断开后自动重连。隧道不通时 Colab 节点（H3、Breeze）的
-提交会得到连接错误，本地 Windows 节点不受影响。
+H3 提交保留在本机发件箱等待恢复，Breeze 提交会得到连接错误，本地 Windows 节点不受影响。
 """
 
 from __future__ import annotations

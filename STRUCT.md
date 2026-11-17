@@ -26,6 +26,7 @@
   - `whisper_asr/`：whisper.cpp 参考音频转写。
   - `qwen_image/`：Qwen Image 2.1（NoctQ V4）备选生图/改图，`skills/qwen-image-prompt-writing/` 随插件发布（含官方提示词模板）。
   - `minimax_h3/`：MiniMax H3 插件；`manifest.py`、`plugin.py`、`requests.py`、`contracts.py`、`render.py`，以及 `fl2va/`、`ref2va/` HTTP 实现。
+    `submissions.py` 为 Colab 节点提供持久提交发件箱：先返回句柄，观察时上传冻结请求，按固定标识查询与幂等重放。
     `prompt_contract.py`、`prompt_codec.py`、`prompt_payload.py`、`prompt_context.py` 负责插件专业格式（`context.shots` 按 Segment 覆盖顺序写入段内切镜软约束），`skills/h3-prompt-writing/` 随插件发布，经 `prompt_skills` 由 `video_prompt` 契约交付。`prompt_lint.py` 是插件的 `prompt_linter`，按官方结构检查对白唯一位置、对白标签、说话者、段落与引用，结果只作工作集软提示。
   - `seedvr2_7b_sharp_fp8/`：SeedVR2 视频超分。
   - `demucs_audio/`：Demucs 人声/背景分离。
@@ -36,12 +37,12 @@
 ## default_model_providers_implement/ — Mac / Windows 模型服务（独立部署，不 import Core）
 
 - `README.md`：部署、资源调度与各 worker 说明。
-- `server.py`：HTTP 任务服务（submit/observe/cancel/artifact）与 runner 装配。
+- `server.py`：HTTP 任务服务（submit/observe/cancel/artifact）与 runner 装配；H3 按 `submission_id` 与请求摘要去重，取消提交保存阻止迟到上传的取消记录。
 - `resource_manager.py`：单个 lane 的互斥/定并发调度、同族驻留、切换释放与排队位置。
 - `lane_dispatcher.py`：进程内多 lane 路由（lane 内 FIFO 与并发上限，lane 间互不等待）。
 - `runners.py`：常驻 JSONL runner 与各模型 runner 工厂。
 - `controller_lease.py`：控制方活性租约与失联释放；可选在租约丢失后通知服务退出。
-- `task_store.py`：任务记录持久化（`runtime-state.json`）。
+- `task_store.py`：任务记录持久化（`runtime-state.json`），含 H3 提交摘要与请求准备中断的恢复。
 - `request_builders.py`：各路由请求校验与任务目录写入。
 - `strict_json.py`：严格 JSON 字段解析。
 - `sampling_progress.py`：采样步速与剩余时间估算。

@@ -123,14 +123,26 @@ class ExclusiveResourceManager:
             self._queue.put(_ReleaseRuntime(completed))
         return completed
 
-    def submit(self, kind: str, prepare: Callable[[TaskRecord], None]) -> TaskRecord:
+    def submit(
+        self,
+        kind: str,
+        prepare: Callable[[TaskRecord], None],
+        *,
+        task_id: str | None = None,
+        submission_digest: str | None = None,
+    ) -> TaskRecord:
         if kind not in self._runners:
             raise ValueError(f"没有为 {kind} 注册 runtime。")
         with self._state_lock:
             if not self._accepting:
                 raise ResourceLeaseRequiredError("Mac Core 资源租约尚未建立。")
             acceptance_epoch = self._acceptance_epoch
-            record = self.store.create(kind)
+            record = self.store.create(
+                kind,
+                task_id=task_id,
+                submission_digest=submission_digest,
+                state="preparing" if submission_digest is not None else "queued",
+            )
         self.store.update(record.task_id, message=f"等待 {self._resource_name}。")
         try:
             prepare(record)
@@ -150,6 +162,8 @@ class ExclusiveResourceManager:
                     error_code="controller_lease_expired",
                 )
                 raise ResourceLeaseRequiredError("Mac Core 资源租约已失效。")
+            if submission_digest is not None:
+                record = self.store.update(record.task_id, state="queued")
             self._queue.put(record.task_id)
             self._pending.append(record.task_id)
         return record

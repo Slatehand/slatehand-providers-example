@@ -7,13 +7,39 @@
   SageAttention、SelfLift、运行节点 本地 Windows / Colab G4）、`soft_duration_limit_seconds = 15` 提示、两个 recipe 的槽位与参数，以及
   默认优先 `minimax_h3.ref2va` 的默认规则（`minimax_h3.fl2va` 供无需任何额外参考时选用）；`render_settings` 把实例设置换算成提交时的画布与采样组合。
 - `plugin.py`：`plugin_instance(endpoint, transport, nodes=...)` 构造可安装的插件实例：`endpoint` 是默认的
-  本地 Windows 节点，`nodes` 追加其它节点（目前为 `colab`）。
+  本地 Windows 节点，`nodes` 追加其它节点（目前为 `colab`）。bundle 传入 `runtime_directory`，为 Colab 安装持久提交传输。
+- `submissions.py`：Colab 提交先原子保存请求并返回稳定句柄，不等待网络；Core 持久化句柄后，观察流程才尝试上传。
+  本机文件权限为 0600，包含冻结请求、节点地址、请求摘要和传输状态，不含认证头。重启后从同一文件继续。
+  每次观察先查询原任务，404 且尚未确认受理时才重放同一 `submission_id`；远端同时校验请求摘要并原子去重。
+  受理后删除本机媒体副本，只保留回执；已受理任务消失时返回 `remote_task_missing`，不会重新执行模型。
+  断线保留句柄，由正常刷新继续；明确拒绝变为失败。显式新生成分配新标识，即使 Seed 与媒体相同也不合并。
+  上传前取消只写本机取消事实；曾经尝试上传的任务经远端取消记录确认，阻止仍在传输中的迟到请求开始生成。
 - `../nodes.py`（与 Breeze 共用）：`NodeRouter` 把同一 recipe 在各节点上的实现包成一个实现。新提交按设置 `node` 选节点；
   句柄记住提交节点（Windows 句柄保持原始 token，其它节点加 `<node>:` 前缀），observe/cancel/read_artifact
   回到原节点，所以切换节点不打断运行中的任务。选中未接入的节点时提交返回 `node_unavailable`。
 
 设置只在全局 Provider 设置页由人类修改，项目与 Playground 共用；改设置只影响之后的提交，
 每个 Generation 在 `provider_snapshot` 中记录提交时的设置。
+
+```mermaid
+sequenceDiagram
+    participant C as Core
+    participant P as H3 Colab 插件
+    participant O as 本机提交发件箱
+    participant S as Colab 模型服务
+    C->>P: submit_recipe
+    P->>O: 原子保存冻结请求与提交标识
+    P-->>C: 稳定句柄
+    Note over C: 持久化 Generation / Playground run 的句柄
+    C->>P: observe 原句柄
+    P->>S: 查询同一任务标识
+    opt 尚未确认受理且远端不存在
+        P->>S: POST 原请求与 submission_id
+        S->>S: 校验摘要，创建一次或返回原任务
+    end
+    S-->>P: 原任务状态
+    P-->>C: 状态、进度或产物
+```
 
 `requests.py` 把通用 RecipeRequest 翻译为包内 `contracts.py` 的 DTO；`render.py` 只在插件内解释画布与采样设置。
 `prompt_context.py` 将 Core 视频领域事实与输入标签转换成 H3 专业格式，`prompt_skills` 提供 `skills/h3-prompt-writing/` 的正文和参考资料，由 Core 经 `video_prompt` 专业契约交付。标签由 Core 统一编号。`context.shots` 按 Segment 覆盖顺序给出每个 Shot；Skill 据此写 `[Shot N] At MM:SS.mmm` 段内切镜软约束，首尾 Picture 只锚定首个 Shot 的开头与最后一个 Shot 的结尾。

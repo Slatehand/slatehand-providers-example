@@ -73,7 +73,12 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
             )
         )
         plugins += [
-            minimax_h3_plugin(windows.endpoint, authorized, nodes=gpu_nodes),
+            minimax_h3_plugin(
+                windows.endpoint,
+                authorized,
+                nodes=gpu_nodes,
+                runtime_directory=context.runtime_directory / "h3-submissions",
+            ),
             seedvr2_plugin(windows.endpoint, authorized),
             stable_audio_3_plugin(windows.endpoint, authorized),
             yue2_plugin(windows.endpoint, authorized),
@@ -83,7 +88,10 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
     if windows is None and colab is not None:
         plugins += [
             breeze_tts2_plugin(None, context.runtime_directory / "breeze-tts2", nodes=gpu_nodes),
-            minimax_h3_plugin(nodes=gpu_nodes),
+            minimax_h3_plugin(
+                nodes=gpu_nodes,
+                runtime_directory=context.runtime_directory / "h3-submissions",
+            ),
         ]
     if colab is not None:
         # Colab VM 由人手动开关（scripts/colab_node.sh）；这里只维持隧道，不启停、不租约。

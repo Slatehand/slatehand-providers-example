@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import hashlib
 import hmac
 import json
 import os
@@ -55,6 +56,10 @@ class DisabledServiceError(LookupError):
     pass
 
 
+class SubmissionConflictError(ValueError):
+    pass
+
+
 class ModelApiServer(ThreadingHTTPServer):
     daemon_threads = True
     # Windows 的 SO_REUSEADDR 允许两个无关进程争用同一端口；模型服务必须拒绝这种歧义。
@@ -91,6 +96,7 @@ class ModelApiServer(ThreadingHTTPServer):
         }
         self.auth_token = auth_token
         self.store = TaskStore(root)
+        self.h3_submission_lock = threading.Lock()
         h3_fl2va_runtime = create_h3_fl2va_comfy_core_runner(root / "resident-runtimes")
         h3_ref2va_runtime = create_h3_ref2va_comfy_core_runner(root / "resident-runtimes")
         breeze_runtime = create_breeze_resident_runner(root / "resident-runtimes")
@@ -211,9 +217,7 @@ class ModelApiHandler(BaseHTTPRequestHandler):
                 return
             if path == "/minimax-h3/ref2va/renders":
                 self._require_enabled("h3_ref2va")
-                record = self.server.manager.submit(
-                    "h3_ref2va", prepare_h3_ref2va(self._read_json())
-                )
+                record = self._submit_h3("h3_ref2va", prepare_h3_ref2va)
                 self._json(
                     202,
                     {
@@ -224,7 +228,7 @@ class ModelApiHandler(BaseHTTPRequestHandler):
                 return
             if path == "/minimax-h3/fl2va/clips":
                 self._require_enabled("h3_fl2va")
-                record = self.server.manager.submit("h3_fl2va", prepare_h3_fl2va(self._read_json()))
+                record = self._submit_h3("h3_fl2va", prepare_h3_fl2va)
                 self._json(202, {"job_token": record.task_id, "queue_position": 1})
                 return
             if path == "/indextts2/speech":
@@ -296,6 +300,12 @@ class ModelApiHandler(BaseHTTPRequestHandler):
                 if stop_id:
                     self._cancel(stop_id, kind)
                     return
+        except SubmissionConflictError as exc:
+            self._json(409, {"message": str(exc)})
+            return
+        except (BrokenPipeError, ConnectionResetError):
+            # 受理回执丢失不撤销任务；同一 submission_id 会读回原任务。
+            return
         except RequestError as exc:
             self._json(422, {"message": str(exc)})
             return
@@ -373,6 +383,10 @@ class ModelApiHandler(BaseHTTPRequestHandler):
         if not self._authorize():
             return
         path = urlsplit(self.path).path
+        submission_id = _match(path, r"/minimax-h3/submissions/([0-9a-f]{32})")
+        if submission_id:
+            self._cancel_h3_submission(submission_id)
+            return
         controller_session_id = _match(path, r"/control/controller-leases/([0-9a-f]{32})")
         if controller_session_id:
             controller = self.server.controller_lease
@@ -395,6 +409,66 @@ class ModelApiHandler(BaseHTTPRequestHandler):
                 self._cancel(task_id, kind)
                 return
         self._json(404, {"message": "接口不存在。"})
+
+    def _submit_h3(self, kind: str, builder) -> TaskRecord:
+        payload = self._read_json()
+        if not isinstance(payload, dict) or "submission_id" not in payload:
+            return self.server.manager.submit(kind, builder(payload))
+        payload = dict(payload)
+        submission_id = payload.pop("submission_id")
+        if not isinstance(submission_id, str) or not TASK_ID.fullmatch(submission_id):
+            raise RequestError("submission_id 必须是 32 位小写十六进制标识。")
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        with self.server.h3_submission_lock:
+            existing = self.server.store.get(submission_id)
+            if existing is not None:
+                self._check_h3_submission(existing, kind, digest)
+                return existing
+            return self.server.manager.submit(
+                kind,
+                builder(payload),
+                task_id=submission_id,
+                submission_digest=digest,
+            )
+
+    @staticmethod
+    def _check_h3_submission(record: TaskRecord, kind: str, digest: str) -> None:
+        if record.kind != kind or record.submission_digest != digest:
+            raise SubmissionConflictError("同一 submission_id 不能用于不同的请求。")
+
+    def _cancel_h3_submission(self, submission_id: str) -> None:
+        try:
+            payload = self._read_json()
+            if not isinstance(payload, dict) or set(payload) != {"kind", "request_sha256"}:
+                raise RequestError("取消提交只接受 kind 与 request_sha256。")
+            kind, digest = payload["kind"], payload["request_sha256"]
+            if not isinstance(kind, str) or kind not in {"h3_fl2va", "h3_ref2va"}:
+                raise RequestError("取消提交的 H3 kind 不合法。")
+            self._require_enabled(kind)
+            if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                raise RequestError("request_sha256 必须是 SHA-256。")
+            with self.server.h3_submission_lock:
+                existing = self.server.store.get(submission_id)
+                if existing is not None:
+                    self._check_h3_submission(existing, kind, digest)
+                    self.server.manager.cancel(submission_id)
+                else:
+                    # 先持久化取消事实，使稍后抵达的同标识上传也不能执行。
+                    self.server.store.create(
+                        kind,
+                        task_id=submission_id,
+                        submission_digest=digest,
+                        state="cancelled",
+                    )
+            self._json(202, {"state": "cancellation_requested"})
+        except SubmissionConflictError as exc:
+            self._json(409, {"message": str(exc)})
+        except RequestError as exc:
+            self._json(422, {"message": str(exc)})
+        except DisabledServiceError:
+            self._json(404, {"message": "接口不存在。"})
 
     def do_GET(self) -> None:  # noqa: N802
         if not self._authorize():
@@ -671,6 +745,7 @@ class ModelApiHandler(BaseHTTPRequestHandler):
     @staticmethod
     def _fl2va_status(record: TaskRecord) -> dict[str, Any]:
         stage = {
+            "preparing": "queued",
             "queued": "queued",
             "running": "generating",
             "succeeded": "done",
@@ -697,6 +772,7 @@ class ModelApiHandler(BaseHTTPRequestHandler):
     @staticmethod
     def _ref2va_status(record: TaskRecord) -> dict[str, Any]:
         status = {
+            "preparing": "pending",
             "queued": "pending",
             "running": "processing",
             "succeeded": "rendered",

@@ -26,6 +26,7 @@ class TaskRecord:
     error_code: str | None = None
     retryable: bool = False
     cancel_requested: bool = False
+    submission_digest: str | None = None
 
 
 class TaskStore:
@@ -40,12 +41,29 @@ class TaskStore:
         self._records: dict[str, TaskRecord] = {}
         self._load()
 
-    def create(self, kind: str) -> TaskRecord:
+    def create(
+        self,
+        kind: str,
+        *,
+        task_id: str | None = None,
+        submission_digest: str | None = None,
+        state: str = "queued",
+    ) -> TaskRecord:
         with self._lock:
-            task_id = uuid.uuid4().hex
+            task_id = task_id or uuid.uuid4().hex
+            if task_id in self._records:
+                raise ValueError("任务标识已存在。")
             task_dir = self.tasks_root / task_id
             task_dir.mkdir(parents=False)
-            record = TaskRecord(task_id, kind, "queued", 0.0, "等待模型资源。", str(task_dir))
+            record = TaskRecord(
+                task_id,
+                kind,
+                state,
+                0.0,
+                "等待模型资源。",
+                str(task_dir),
+                submission_digest=submission_digest,
+            )
             self._records[task_id] = record
             self._save()
             return _copy(record)
@@ -113,11 +131,20 @@ class TaskStore:
         if not isinstance(data["tasks"], list):
             raise RuntimeError("默认 Provider runtime-state.json tasks 不合法。")
         for item in data["tasks"]:
-            if not isinstance(item, dict) or set(item) != set(TaskRecord.__dataclass_fields__):
+            fields = set(TaskRecord.__dataclass_fields__)
+            if (
+                not isinstance(item, dict)
+                or set(item) - fields
+                or fields - set(item) - {"submission_digest"}
+            ):
                 raise RuntimeError("默认 Provider runtime-state.json TaskRecord 字段不合法。")
             record = TaskRecord(**item)
             if record.task_id in self._records:
                 raise RuntimeError("默认 Provider runtime-state.json 存在重复 task_id。")
+            if record.state == "preparing":
+                record.state = "failed"
+                record.message = "模型服务在保存请求期间重启；任务未执行，请人工重试。"
+                record.error_code = "request_preparation_interrupted"
             if record.state == "running":
                 artifact = self.artifact_path(record)
                 if artifact is None:

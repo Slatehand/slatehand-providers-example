@@ -93,6 +93,15 @@ LAN 模式仍强制 Bearer Token。
 路径分隔符生成，Windows 与 Linux 共用同一份 `comfy_core`。Colab 节点不启用控制租约；VM 由人用
 `scripts/colab_node.sh` 手动开关。
 
+H3 两个提交接口可携带 `submission_id`（32 位小写十六进制）。任务 ID 等于该标识；服务按去掉标识后的规范化
+JSON 计算 SHA-256，在同一临界区内查重与创建。相同标识、模型路由与摘要返回原任务，不重复排队；同标识不同
+请求返回 409。摘要随 TaskRecord 原子持久化，服务重启仍可查重。保存输入期间使用 `preparing`，输入全部落盘后才
+进入 `queued`；准备期间重启会明确失败，不执行部分输入。旧任务没有提交摘要，原有状态与产物照常保留。
+
+`DELETE /minimax-h3/submissions/<submission_id>` 只接受 `kind`（`h3_fl2va` / `h3_ref2va`）与
+`request_sha256`。已存在的匹配任务走原取消流程；任务尚未建立时持久保存取消记录。随后到达的同标识上传只会
+得到已取消的原记录，不进入执行队列。接口复用模型服务认证，不接收项目语义或任意路径。
+
 ### H3 Runtime
 
 - 执行边界：FL2VA 与 Ref2VA 只通过 `comfy_core/` 在各自的隔离子进程内执行 Slatehand 现场构造的固定

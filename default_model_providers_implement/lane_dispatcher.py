@@ -117,11 +117,23 @@ class LaneDispatcher:
         ).start()
         return completed
 
-    def submit(self, kind: str, prepare: Callable[[TaskRecord], None]) -> TaskRecord:
+    def submit(
+        self,
+        kind: str,
+        prepare: Callable[[TaskRecord], None],
+        *,
+        task_id: str | None = None,
+        submission_digest: str | None = None,
+    ) -> TaskRecord:
         manager = self._managers_by_kind.get(kind)
         if manager is None:
             raise ValueError(f"没有为 {kind} 注册 runtime。")
-        return manager.submit(kind, prepare)
+        return manager.submit(
+            kind,
+            prepare,
+            task_id=task_id,
+            submission_digest=submission_digest,
+        )
 
     def cancel(self, task_id: str, **kwargs: object) -> TaskRecord | None:
         record = self.store.get(task_id)

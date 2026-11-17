@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 
 from core.model_providers.http import HttpTransport
 from core.model_providers.registry import PluginInstance
@@ -17,6 +18,7 @@ from slatehand_providers.plugins.nodes import DEFAULT_NODE, NodeRouter
 from .manifest import MANIFEST
 from .prompt_context import format_prompt_workset, prompt_skills
 from .prompt_lint import lint_h3_prompt
+from .submissions import H3SubmissionTransport
 
 H3Node = tuple[str, HttpTransport | None]
 
@@ -26,6 +28,7 @@ def plugin_instance(
     transport: HttpTransport | None = None,
     *,
     nodes: Mapping[str, H3Node] | None = None,
+    runtime_directory: Path | None = None,
 ) -> PluginInstance:
     """``endpoint``/``transport`` 是默认节点；``nodes`` 追加其它节点（键见 ``NODE_LABELS``）。"""
     all_nodes: dict[str, H3Node] = {}
@@ -34,6 +37,17 @@ def plugin_instance(
     all_nodes.update(nodes or {})
     if not all_nodes:
         raise ValueError("H3 插件至少需要一个运行节点。")
+
+    def transport_for(key: str, node: H3Node, mode: str) -> HttpTransport | None:
+        if runtime_directory is None or key != "colab":
+            return node[1]
+        return H3SubmissionTransport(
+            node[0],
+            mode,
+            runtime_directory / key / mode,
+            node[1],
+        )
+
     return PluginInstance(
         MANIFEST,
         endpoint=next(iter(all_nodes.values()))[0],
@@ -43,11 +57,17 @@ def plugin_instance(
         recipes={
             "minimax_h3.fl2va": NodeRouter(
                 "H3 FL2VA",
-                {key: MiniMaxH3FL2VAProvider(*node) for key, node in all_nodes.items()},
+                {
+                    key: MiniMaxH3FL2VAProvider(node[0], transport_for(key, node, "fl2va"))
+                    for key, node in all_nodes.items()
+                },
             ),
             "minimax_h3.ref2va": NodeRouter(
                 "H3 Ref2VA",
-                {key: MiniMaxH3Ref2VAProvider(*node) for key, node in all_nodes.items()},
+                {
+                    key: MiniMaxH3Ref2VAProvider(node[0], transport_for(key, node, "ref2va"))
+                    for key, node in all_nodes.items()
+                },
             ),
         },
     )

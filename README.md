@@ -134,7 +134,11 @@ H3 与 Breeze TTS 2 可同时接入本地 Windows 与 Colab（G4，RTX PRO 6000 
 - 接入条件：`var/secrets/colab-model-service-token` 存在，且 `provider.local.env` 设置 `SLATEHAND_COLAB_SESSION`。
   Core 运行期间由 bundle 服务维持 `colab ssh` 隧道（本机 `127.0.0.1:18791` → VM `127.0.0.1:8791`）。
   只在 `colab sessions` 列出该会话时才连接，避免 `colab ssh` 自动开出新的计费 VM；会话不在线时 Core 照常启动，
-  只是 Colab 节点的提交会连接失败。
+  H3 的 Colab 提交保留在本机等待连接恢复，Breeze 的 Colab 提交会连接失败。
+- H3 的 Colab 提交先在 bundle 运行目录 `h3-submissions/colab/` 保存冻结请求并返回句柄，再由 Core 的观察流程上传。
+  断线后继续刷新同一 Generation：先查原标识，尚未受理才按原标识与原请求重放；不会创建新的 Generation。
+  上传网络超时为 120 秒。受理后只保留轻量回执；已确认的远端任务丢失时明确失败，不重新生成。
+  本机发件箱不保存 Token，项目与 Playground 共用这一机制；本地 Windows 提交沿用直接 HTTP。
 - 开关节点由人手动管理，用 `scripts/colab_node.sh`（需要已安装并登录
   [Colab CLI](https://github.com/googlecolab/google-colab-cli)）。`up` 依次开 G4、同步本仓库 `default_model_providers_implement/` 与 Token，再在 VM 上运行 `colab/setup.sh` 与
   `colab/run_server.sh start`，最后进入状态面板；代码未变化且服务在运行时跳过部署与重启，不打断运行中的任务。
