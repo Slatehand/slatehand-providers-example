@@ -22,11 +22,12 @@ COLAB=${SLATEHAND_COLAB_CLI:-colab}
 REMOTE=/content/slatehand-providers
 
 # 远程命令走 kernel 通道（colab exec），不占用 SSH：Core 运行时其 Colab 隧道独占唯一的 colab ssh 连接。
-# colab exec 的退出码恒为 0，这里由远端打印退出码标记，本机解析后作为返回值；输出实时回显。
-remote() {
-  local output status
-  output=$(mktemp -t slatehand-remote)
-  {
+# colab exec 不传递远端进程的退出码。用远端标记区分执行失败（1）与未收到结果（2），输出实时回显。
+remote() (
+  local result status detail
+  result=$(mktemp -d -t slatehand-remote) || return 1
+  trap 'rm -rf "$result"' EXIT
+  if {
     printf 'command = %s\n' "$(printf '%s' "$1" | python3 -c 'import sys; print(repr(sys.stdin.read()))')"
     cat <<'PY'
 import subprocess, sys
@@ -36,18 +37,34 @@ for chunk in iter(lambda: process.stdout.read1(65536), b""):
     sys.stdout.flush()
 print(f"__SLATEHAND_RC__={process.wait()}")
 PY
-  } | "$COLAB" exec -s "$SESSION" --timeout 0 | tee "$output" | { grep -v '^__SLATEHAND_RC__=' || true; } \
-    | python3 "$REPO/scripts/progress_view.py"
-  status=$(sed -n 's/^__SLATEHAND_RC__=//p' "$output" | tail -n 1)
-  rm -f "$output"
-  [ "${status:-1}" = 0 ]
+  } | "$COLAB" exec -s "$SESSION" --timeout "${2:-0}" 2>"$result/stderr" \
+    | tee "$result/stdout" | { grep -v '^__SLATEHAND_RC__=' || true; } \
+    | python3 "$REPO/scripts/progress_view.py"; then :; fi
+  status=$(sed -n 's/^__SLATEHAND_RC__=//p' "$result/stdout" | tail -n 1)
+  if [ -z "$status" ]; then
+    detail=$(tail -n 1 "$result/stderr")
+    echo "Colab 会话 ${SESSION} 未返回命令结果${detail:+（${detail}）}。" >&2
+    return 2
+  fi
+  [ "$status" = 0 ]
+)
+
+# 只重试可重复执行的命令。远端明确报错时保留失败，由调用方处理。
+remote_retry() {
+  local attempt status
+  for attempt in 1 2 3; do
+    if remote "$1" 45; then return 0; else status=$?; fi
+    if [ "$status" -ne 2 ] || [ "$attempt" -eq 3 ]; then return "$status"; fi
+    echo "将在 2 秒后重新连接 Colab（重试 ${attempt}/2）。" >&2
+    sleep 2
+  done
 }
 session_running() { "$COLAB" sessions 2>/dev/null | grep -q "^\[$SESSION\] "; }
 
 # 状态面板的行：远端服务、GPU、权重、任务与后台下载，加上本机到 Colab 的隧道（Core 经它提交）。
 panel_rows() {
   local remote_rows
-  if remote_rows=$(remote "python3 $REMOTE/default_model_providers_implement/colab/node_status.py" 2>/dev/null) \
+  if remote_rows=$(remote "python3 $REMOTE/default_model_providers_implement/colab/node_status.py" 15 2>/dev/null) \
     && [ -n "$remote_rows" ]; then
     printf '%s\n' "$remote_rows"
   else
@@ -66,6 +83,9 @@ panel_rows() {
 main() {
   case "${1:-}" in
     up)
+      local archive digest status deployed server
+      deployed=$REMOTE/.deployed-sha256
+      server=$REMOTE/default_model_providers_implement/colab/run_server.sh
       if [ ! -s "$TOKEN" ]; then
         mkdir -p "$(dirname "$TOKEN")"
         (umask 077 && openssl rand -hex 32 > "$TOKEN")
@@ -76,21 +96,34 @@ main() {
         "$COLAB" new -s "$SESSION" --gpu G4
       fi
       echo "==> 同步代码与 Token"
-      archive=$(mktemp -t slatehand-colab).tar.gz
-      trap 'rm -f "$archive"' EXIT
+      archive=$(mktemp -t slatehand-colab)
+      trap "$(printf 'rm -f %q' "$archive")" EXIT
       # gzip -n 不写时间戳：代码不变则包的哈希不变，可判断是否需要重新部署。
       COPYFILE_DISABLE=1 tar --no-xattrs --exclude '__pycache__' -cf - default_model_providers_implement | gzip -n > "$archive"
       digest=$(shasum -a 256 "$archive" | cut -d' ' -f1)
-      if remote "[ \"\$(cat $REMOTE/.deployed-sha256 2>/dev/null)\" = $digest ] && bash $REMOTE/default_model_providers_implement/colab/run_server.sh status >/dev/null" >/dev/null 2>&1; then
+      if remote_retry "[ \"\$(cat $deployed 2>/dev/null)\" = $digest ] && bash $server status >/dev/null" >/dev/null; then
         echo "代码未变化且模型服务运行中，跳过部署与重启（不打断运行中的任务）。"
       else
+        status=$?
+        if [ "$status" -ne 1 ]; then return "$status"; fi
         "$COLAB" upload -s "$SESSION" "$archive" /content/slatehand-providers.tar.gz >/dev/null
         "$COLAB" upload -s "$SESSION" "$TOKEN" /root/.slatehand-colab-token >/dev/null
         remote "chmod 600 /root/.slatehand-colab-token && rm -rf $REMOTE/default_model_providers_implement && mkdir -p $REMOTE && tar -xzf /content/slatehand-providers.tar.gz -C $REMOTE"
         echo "==> 安装环境、下载 Turbo 所需权重（其余权重随后在后台下载）"
-        remote "SLATEHAND_PROGRESS_INTERVAL=3 bash $REMOTE/default_model_providers_implement/colab/setup.sh"
+        # 先完成旧服务的停止，再重试可重复执行的 start，避免启动成功后丢回执导致再停一次。
+        remote "set -e
+          SLATEHAND_PROGRESS_INTERVAL=3 bash $REMOTE/default_model_providers_implement/colab/setup.sh
+          if bash $server status >/dev/null; then
+            bash $server stop >/dev/null
+            for attempt in \$(seq 1 30); do
+              if ! bash $server status >/dev/null; then exit 0; fi
+              sleep 1
+            done
+            echo '等待旧模型服务退出超时。' >&2
+            exit 1
+          fi"
         echo "==> 启动模型服务"
-        remote "bash $REMOTE/default_model_providers_implement/colab/run_server.sh stop >/dev/null; bash $REMOTE/default_model_providers_implement/colab/run_server.sh start && echo $digest > $REMOTE/.deployed-sha256"
+        remote_retry "bash $server start && echo $digest > $deployed"
       fi
       echo "==> 进入状态面板（不用时记得 $0 down，空闲也按约每小时 10 个计算单元计费）"
       sleep 2
