@@ -22,6 +22,7 @@ WEIGHTS = (
     ("YuE2", (STATE / "model-ready/yue2",)),
     ("Demucs", (STATE / "model-ready/demucs",)),
     ("Whisper", (STATE / "model-ready/whisper",)),
+    ("HunyuanVideo-Foley XXL", (STATE / "model-ready/hunyuan_foley",)),
     ("Stable Audio 3", (STATE / "model-ready/stable_audio_3",)),
     ("Hybrid V2", (H3 / "DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors",)),
     (

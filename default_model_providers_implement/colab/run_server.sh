@@ -31,6 +31,10 @@ case "${1:-}" in
     SLATEHAND_SEEDVR2_ROOT=/content/seedvr2 \
     SLATEHAND_SEEDVR2_MODEL_ROOT=/content/models/SeedVR2 \
     SLATEHAND_SEEDVR2_PYTHON=/content/seedvr2/.venv/bin/python \
+    SLATEHAND_FOLEY_PYTHON=/content/foley-venv/bin/python \
+    SLATEHAND_FOLEY_ROOT=/content/HunyuanVideo-Foley \
+    SLATEHAND_FOLEY_MODELS=/content/models/HunyuanVideo-Foley \
+    SLATEHAND_FOLEY_HF_HOME=/content/foley-hf \
     SLATEHAND_YUE2_PYTHON=/content/yue2-venv/bin/python \
     SLATEHAND_YUE2_MODELS=/content/models \
     SLATEHAND_STABLE_AUDIO_PYTHON=/content/stable-audio-3-venv/bin/python \
@@ -42,7 +46,7 @@ case "${1:-}" in
     PYTHONPATH="$REPO" \
       setsid nohup python3 -m default_model_providers_implement.server \
         --host 127.0.0.1 --port "$PORT" --state-root "$STATE" \
-        --services h3_fl2va,h3_ref2va,breeze_tts_2,indextts2,seedvr2_7b_sharp_fp8,qwen_image,yue2,stable_audio_3,demucs_audio_separation \
+        --services h3_fl2va,h3_ref2va,breeze_tts_2,indextts2,seedvr2_7b_sharp_fp8,qwen_image,yue2,stable_audio_3,demucs_audio_separation,hunyuan_foley \
         --resource-name exclusive_gpu --whisper-asr \
         --auth-token-env SLATEHAND_MODEL_SERVICE_TOKEN \
         > "$STATE/server.log" 2>&1 &

@@ -18,6 +18,10 @@ $env:SLATEHAND_SEEDVR2_PYTHON = "E:\Programs\Dev\MiniForge3\envs\slatehand-seedv
 $env:SLATEHAND_FFPROBE = "E:\Programs\Dev\MiniForge3\envs\slatehand-seedvr2\Library\bin\ffprobe.exe"
 $env:SLATEHAND_STABLE_AUDIO_PYTHON = "/home/ljx/ai/stable-audio-3/.venv/bin/python"
 $env:SLATEHAND_STABLE_AUDIO_PYTHONPATH = "/mnt/e/Project/slatehand-providers-example"
+$ProjectRoot = Split-Path -Parent $RepositoryRoot
+$WslProjectRoot = "/mnt/" + $ProjectRoot.Substring(0, 1).ToLowerInvariant() + ($ProjectRoot.Substring(2) -replace '\\', '/')
+$env:SLATEHAND_FOLEY_ROOT = "$WslProjectRoot/HunyuanVideo-Foley"
+$env:SLATEHAND_FOLEY_MODELS = "$WslProjectRoot/models/tencent/HunyuanVideo-Foley"
 $env:SLATEHAND_YUE2_PYTHON = "/home/ljx/ai/yue2/.venv/bin/python"
 $env:SLATEHAND_YUE2_MODELS = "/home/ljx/ai/models"
 $env:SLATEHAND_YUE2_PYTHONPATH = "/mnt/e/Project/slatehand-providers-example"
@@ -59,7 +63,7 @@ while ($true) {
             "--host", $ListenAddress,
             "--port", "8791",
             "--state-root", $StateRoot,
-            "--services", "mock,h3_fl2va,h3_ref2va,breeze_tts_2,indextts2,seedvr2_7b_sharp_fp8,stable_audio_3,yue2,qwen_image",
+            "--services", "mock,h3_fl2va,h3_ref2va,breeze_tts_2,indextts2,seedvr2_7b_sharp_fp8,stable_audio_3,yue2,qwen_image,hunyuan_foley",
             "--resource-name", "exclusive_gpu",
             "--auth-token-env", "SLATEHAND_MODEL_SERVICE_TOKEN",
             "--controller-lease-timeout-seconds", "20",

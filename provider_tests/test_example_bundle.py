@@ -62,6 +62,7 @@ def test_full_deployment_installs_plugins_in_priority_order(tmp_path: Path, monk
         "seedvr2_7b_sharp_fp8",
         "stable_audio_3",
         "yue2",
+        "hunyuan_foley",
         "qwen_image",
         "indextts2",
     ]

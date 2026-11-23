@@ -140,10 +140,16 @@ Windows 节点单独占一个终端。服务未启动时 Core 照常启动，Win
 提供 `create_bundle(context) -> ProviderBundle`，从 `context.provider_directory` 读取自己的配置。步骤与代码骨架见
 Core 仓库的 `slatehand-provider-plugin` Skill（`.agents/skills/slatehand-provider-plugin/`）。
 
+## 视频音效
+
+Playground 的「视频音效」使用 HunyuanVideo-Foley XXL。选取 1–15 秒 MP4，填写音效描述，即可生成与画面
+等长的 48 kHz 单声道 WAV。在「Provider 设置 → HunyuanVideo-Foley XXL → 运行节点」选择 Windows 或 Colab。
+Windows 复用 WSL 部署，Colab 由节点的后台安装准备模型。
+
 ## Colab 节点
 
 Colab G4 提供 H3 视频、SeedVR2 超分、Qwen Image 生图与改图、Breeze 音色设计与克隆、IndexTTS2.5 克隆、
-Stable Audio 3 音频生成、YuE2 歌曲生成、Demucs 音轨分离和 Whisper 转写。用各插件的「运行节点」选择
+Stable Audio 3 音频生成、YuE2 歌曲生成、HunyuanVideo-Foley XXL 视频音效、Demucs 音轨分离和 Whisper 转写。用各插件的「运行节点」选择
 Colab G4。异步任务的查询、取消和产物读取仍按句柄回到提交时的节点。Codex 和 AGY 图片插件使用 Mac 上
 已经认证的客户端，Colab 的生图与改图由 Qwen Image 执行。
 
@@ -166,7 +172,7 @@ Colab G4。异步任务的查询、取消和产物读取仍按句柄回到提交
   每台 Colab 运行时同时只允许一个 `colab ssh` 连接，Core 运行时由隧道占用，所以脚本的远程命令走 kernel 通道
   （`colab exec`）、文件走 `colab upload`，Core 开着也能开机部署；手工 `colab ssh` 调试需先停 Core。
 - 冷启动先准备 H3 Turbo V2 及共用权重，约 43 GB，随后启动模型服务。后台先准备 Breeze、Qwen Image、
-  SeedVR2、IndexTTS2.5、YuE2、Demucs、Whisper 与 Stable Audio 3。基础能力全部就绪后，依次下载
+  SeedVR2、IndexTTS2.5、YuE2、Demucs、Whisper、HunyuanVideo-Foley XXL 与 Stable Audio 3。基础能力全部就绪后，依次下载
   **Hybrid V2 → 官方 Pruned BF16（FL2VA 与 Ref2VA）**。仅接入 Colab 时，H3 默认选 Turbo V2。
   基础阶段失败时继续尝试其它基础能力，并延后可选权重。
   再次运行 `up` 会重试未完成的阶段。下载后的权重缓存于 VM 本地盘。

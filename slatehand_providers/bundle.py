@@ -19,6 +19,7 @@ from slatehand_providers.plugins.agy_image.plugin import plugin_instance as agy_
 from slatehand_providers.plugins.breeze_tts2.plugin import plugin_instance as breeze_tts2_plugin
 from slatehand_providers.plugins.codex_image.plugin import plugin_instance as codex_image_plugin
 from slatehand_providers.plugins.demucs_audio.plugin import plugin_instance as demucs_audio_plugin
+from slatehand_providers.plugins.hunyuan_foley.plugin import plugin_instance as hunyuan_foley_plugin
 from slatehand_providers.plugins.indextts2.plugin import plugin_instance as indextts2_plugin
 from slatehand_providers.plugins.minimax_h3.plugin import plugin_instance as minimax_h3_plugin
 from slatehand_providers.plugins.nodes import route_plugin
@@ -95,6 +96,7 @@ def build_bundle(deployment: Deployment, context: BundleContext) -> ProviderBund
             with_colab(seedvr2_plugin, endpoint, authorized),
             with_colab(stable_audio_3_plugin, endpoint, authorized),
             with_colab(yue2_plugin, endpoint, authorized),
+            with_colab(hunyuan_foley_plugin, endpoint, authorized),
             with_colab(qwen_image_plugin, endpoint, authorized),
             with_colab(indextts2_plugin, endpoint, authorized),
         ]

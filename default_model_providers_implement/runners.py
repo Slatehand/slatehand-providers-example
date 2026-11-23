@@ -634,6 +634,41 @@ def yue2_runner(record: TaskRecord, cancel: threading.Event, progress: Progress)
     )
 
 
+def hunyuan_foley_runner(
+    record: TaskRecord, cancel: threading.Event, progress: Progress
+) -> RunResult:
+    python = os.environ.get("SLATEHAND_FOLEY_PYTHON")
+    if python is None and os.name == "nt":
+        distro = os.environ.get("SLATEHAND_WSL_DISTRIBUTION", "Ubuntu")
+        home = subprocess.check_output(
+            ["wsl.exe", "-d", distro, "--exec", "printenv", "HOME"],
+            encoding="utf-8",
+            timeout=30,
+        ).strip()
+        python = f"{home}/miniforge3/envs/hunyuan_foley/bin/python"
+    if not python:
+        raise RuntimeError("缺少 SLATEHAND_FOLEY_PYTHON，请检查 XXL 部署。")
+    return _audio_model_runner(
+        record,
+        cancel,
+        progress,
+        module="hunyuan_foley_worker",
+        python=python,
+        wsl_pythonpath=_wsl_path(Path(__file__).resolve().parents[1]),
+        options=[
+            "--repository",
+            os.environ["SLATEHAND_FOLEY_ROOT"],
+            "--models",
+            os.environ["SLATEHAND_FOLEY_MODELS"],
+            *(
+                ["--hf-home", os.environ["SLATEHAND_FOLEY_HF_HOME"]]
+                if "SLATEHAND_FOLEY_HF_HOME" in os.environ
+                else []
+            ),
+        ],
+    )
+
+
 def _audio_model_runner(
     record: TaskRecord,
     cancel: threading.Event,

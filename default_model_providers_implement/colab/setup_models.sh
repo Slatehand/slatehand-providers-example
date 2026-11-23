@@ -128,3 +128,38 @@ whisper() {
   stage_all "Whisper 下载" \
     "$CACHE/ggml-large-v3-turbo-q5_0.bin|$repo/ggml-large-v3-turbo-q5_0.bin|574041195|"
 }
+
+hunyuan_foley() {
+  local root=/content/HunyuanVideo-Foley venv=/content/foley-venv model=$CACHE/HunyuanVideo-Foley
+  local repo=$HF/tencent/HunyuanVideo-Foley/resolve/3abd4e833b95b8db0fc9c687afc52483a48e9a97
+  checkout https://github.com/Tencent-Hunyuan/HunyuanVideo-Foley.git "$root" df7b005b5023df2a9b73e1d66dd51d452799884e
+  stage_all "HunyuanVideo-Foley XXL 下载" \
+    "$model/hunyuanvideo_foley.pth|$repo/hunyuanvideo_foley.pth|10301204679|" \
+    "$model/synchformer_state_dict.pth|$repo/synchformer_state_dict.pth|950058171|" \
+    "$model/vae_128d_48k.pth|$repo/vae_128d_48k.pth|1486465965|"
+  cuda_env "$venv" 3.12 2.9.0 torchvision==0.24.0 torchaudio==2.9.0
+  uv pip install -q --python "$venv/bin/python" \
+    'numpy==1.26.4' 'diffusers==0.35.2' 'timm==1.0.20' 'huggingface-hub==0.35.3' \
+    av pillow einops pyyaml omegaconf easydict loguru tqdm sentencepiece soundfile \
+    'git+https://github.com/descriptinc/audiotools@348ebf2034ce24e2a91a553e3171cb00c0c71678' \
+    'git+https://github.com/huggingface/transformers@a957b7911a758d54597914b4479fe6e81424d64f'
+  HF_HOME=/content/foley-hf "$venv/bin/python" - <<'PY'
+from pathlib import Path
+
+from huggingface_hub import snapshot_download
+
+for repo, revision, patterns in (
+    ("google/siglip2-base-patch16-512", "a89f5c5093f902bf39d3cd4d81d2c09867f0724b",
+     ["config.json", "model.safetensors"]),
+    ("laion/larger_clap_general", "ada0c23a36c4e8582805bb38fec3905903f18b41",
+     ["*.json", "merges.txt", "pytorch_model.bin"]),
+):
+    snapshot = Path(snapshot_download(repo, revision=revision, allow_patterns=patterns))
+    refs = snapshot.parent.parent / "refs"
+    refs.mkdir(exist_ok=True)
+    pending = refs / "main.part"
+    pending.write_text(revision, encoding="ascii")
+    pending.replace(refs / "main")
+PY
+  HF_HUB_OFFLINE=1 PYTHONPATH="$root" "$venv/bin/python" -c 'import torch; import hunyuanvideo_foley; assert torch.cuda.is_bf16_supported()'
+}

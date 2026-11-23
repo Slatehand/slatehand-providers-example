@@ -9,6 +9,7 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -23,6 +24,7 @@ from .request_builders import (
     prepare_demucs_audio_separation,
     prepare_h3_fl2va,
     prepare_h3_ref2va,
+    prepare_hunyuan_foley,
     prepare_indextts2,
     prepare_mock,
     prepare_qwen_image,
@@ -41,6 +43,7 @@ from .runners import (
     create_qwen_image_comfy_core_runner,
     create_seedvr2_resident_runner,
     demucs_audio_separation_runner,
+    hunyuan_foley_runner,
     mock_runner,
     stable_audio_3_runner,
     yue2_runner,
@@ -63,8 +66,9 @@ class SubmissionConflictError(ValueError):
 
 class ModelApiServer(ThreadingHTTPServer):
     daemon_threads = True
-    # Windows 的 SO_REUSEADDR 允许两个无关进程争用同一端口；模型服务必须拒绝这种歧义。
-    allow_reuse_address = False
+    # Colab 重启时允许重新绑定 TIME_WAIT 端口。Windows 的 SO_REUSEADDR 语义会允许重复绑定。
+    allow_reuse_address = sys.platform.startswith("linux")
+    allow_reuse_port = False
 
     def __init__(
         self,
@@ -94,6 +98,7 @@ class ModelApiServer(ThreadingHTTPServer):
             "demucs_audio_separation",
             "stable_audio_3",
             "yue2",
+            "hunyuan_foley",
             "qwen_image",
         }
         self.auth_token = auth_token
@@ -120,6 +125,7 @@ class ModelApiServer(ThreadingHTTPServer):
             "demucs_audio_separation": demucs_audio_separation_runner,
             "stable_audio_3": stable_audio_3_runner,
             "yue2": yue2_runner,
+            "hunyuan_foley": hunyuan_foley_runner,
             "qwen_image": qwen_image_runtime,
         }
         self.manager = LaneDispatcher(
@@ -283,6 +289,13 @@ class ModelApiHandler(BaseHTTPRequestHandler):
                 )
                 self._json(202, {"generation_id": record.task_id})
                 return
+            if path == "/hunyuan-foley/generations":
+                self._require_enabled("hunyuan_foley")
+                record = self.server.manager.submit(
+                    "hunyuan_foley", prepare_hunyuan_foley(self._read_json())
+                )
+                self._json(202, {"generation_id": record.task_id})
+                return
             if path == "/yue2/generations":
                 self._require_enabled("yue2")
                 record = self.server.manager.submit("yue2", prepare_yue2(self._read_json()))
@@ -367,6 +380,12 @@ class ModelApiHandler(BaseHTTPRequestHandler):
         )
         if task_id:
             self._cancel(task_id, "stable_audio_3")
+            return
+        task_id = _match(
+            urlsplit(self.path).path, r"/hunyuan-foley/generations/([0-9a-f]{32})/abort"
+        )
+        if task_id:
+            self._cancel(task_id, "hunyuan_foley")
             return
         task_id = _match(urlsplit(self.path).path, r"/yue2/generations/([0-9a-f]{32})/abort")
         if task_id:
@@ -536,6 +555,11 @@ class ModelApiHandler(BaseHTTPRequestHandler):
                 self._text_to_audio_status,
             ),
             (
+                r"/hunyuan-foley/generations/([0-9a-f]{32})",
+                "hunyuan_foley",
+                self._text_to_audio_status,
+            ),
+            (
                 r"/yue2/generations/([0-9a-f]{32})",
                 "yue2",
                 self._text_to_audio_status,
@@ -590,6 +614,10 @@ class ModelApiHandler(BaseHTTPRequestHandler):
             (
                 r"/stable-audio-3/generations/([0-9a-f]{32})/audio/([0-9a-f]{32})",
                 "stable_audio_3",
+            ),
+            (
+                r"/hunyuan-foley/generations/([0-9a-f]{32})/audio/([0-9a-f]{32})",
+                "hunyuan_foley",
             ),
             (r"/yue2/generations/([0-9a-f]{32})/audio/([0-9a-f]{32})", "yue2"),
             (r"/qwen-image/renders/([0-9a-f]{32})/image/([0-9a-f]{32})", "qwen_image"),
@@ -971,7 +999,7 @@ def build_parser() -> argparse.ArgumentParser:
             "逗号分隔的显式服务集合：mock,codex_image_generate,codex_image_edit,"
             "agy_image_generate,agy_image_edit,h3_fl2va,h3_ref2va,"
             "seedvr2_7b_sharp_fp8,demucs_audio_separation,breeze_tts_2,indextts2,stable_audio_3,"
-            "yue2,qwen_image"
+            "yue2,qwen_image,hunyuan_foley"
         ),
     )
     parser.add_argument("--resource-name")
@@ -1066,6 +1094,7 @@ def main(argv: list[str] | None = None) -> int:
         "demucs_audio_separation",
         "stable_audio_3",
         "yue2",
+        "hunyuan_foley",
         "qwen_image",
     }
     services = {item.strip() for item in args.services.split(",") if item.strip()}

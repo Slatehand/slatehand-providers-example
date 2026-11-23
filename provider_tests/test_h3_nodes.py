@@ -154,6 +154,7 @@ def test_bundle_installs_one_h3_plugin_with_both_nodes_and_the_tunnel(tmp_path: 
             "seedvr2_7b_sharp_fp8",
             "stable_audio_3",
             "yue2",
+            "hunyuan_foley",
             "qwen_image",
             "indextts2",
         }:
@@ -175,6 +176,7 @@ def test_colab_only_bundle_installs_all_model_capabilities(tmp_path: Path) -> No
         "seedvr2_7b_sharp_fp8",
         "stable_audio_3",
         "yue2",
+        "hunyuan_foley",
         "qwen_image",
         "indextts2",
     ):

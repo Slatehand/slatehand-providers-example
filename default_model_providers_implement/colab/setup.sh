@@ -180,7 +180,7 @@ background() {
   rm -f "$READY/background"
   echo "$(date +%T) ===== 后台准备开始"
   command -v uv >/dev/null || python3 -m pip install -q uv
-  for model in breeze qwen_image seedvr2 indextts2 yue2 demucs whisper stable_audio_3; do
+  for model in breeze qwen_image seedvr2 indextts2 yue2 demucs whisper hunyuan_foley stable_audio_3; do
     prepare_stage "$model" || failed+=("$model")
   done
   if [ "${#failed[@]}" -gt 0 ]; then
@@ -210,7 +210,7 @@ case "${1:-}" in
   --ensure-background) ensure_background ;;
   --stage)
     case "${2:-}" in
-      breeze|qwen_image|seedvr2|indextts2|yue2|demucs|whisper|stable_audio_3|h3_hybrid|h3_bf16)
+      breeze|qwen_image|seedvr2|indextts2|yue2|demucs|whisper|hunyuan_foley|stable_audio_3|h3_hybrid|h3_bf16)
         "$2" ;;
       *) echo "未知安装阶段。" >&2; exit 2 ;;
     esac

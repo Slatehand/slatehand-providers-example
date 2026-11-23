@@ -31,6 +31,7 @@
   - `seedvr2_7b_sharp_fp8/`：SeedVR2 视频超分。
   - `demucs_audio/`：Demucs 人声/背景分离。
   - `stable_audio_3/`：Stable Audio 3 Medium 文生音频，目前只供 Playground。
+  - `hunyuan_foley/`：HunyuanVideo-Foley XXL 视频音效，只供 Playground。
   - `yue2/`：YuE2-3B 风格描述 + 歌词生成整首歌，只供 Playground；`skills/yue2-song-writing/` 是改写自官方的写作 Skill，经 Playground `audio_prompt` 交付。
   - `mock/`：测试用 mock 生成。
 
@@ -57,6 +58,7 @@
 - `codex_worker.py`、`agy_worker.py`：Codex / AGY 图片 worker（Mac）。
 - `demucs_audio_worker.py`：音轨分离（Mac）。
 - `stable_audio_3_worker.py`：Stable Audio 3 Medium 一次性生成（Windows 经 WSL、Colab 直接运行）。
+- `hunyuan_foley_worker.py`：HunyuanVideo-Foley XXL 一次性推理，Windows 经 WSL、Colab 直接运行。
 - `yue2_worker.py`：YuE2-3B 一次性歌曲生成（Windows 经 WSL、Colab 直接运行）；歌词为空时先把乐谱人声旋律移到器乐声部，并把超长乐谱按整段收到 300 秒内。
 - `yue2_instrumental/`：YuE2 官方纯音乐转谱脚本（MIT，原样，不参与 ruff）。
 - `requirements-codex-image.txt`：私有图片服务依赖。

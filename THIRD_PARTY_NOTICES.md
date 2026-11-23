@@ -97,3 +97,14 @@ Slatehand 独立编写的适配层将参考图写作规则统一到全局 `slate
 - Demucs：https://github.com/facebookresearch/demucs ，MIT License，使用上游发布的 htdemucs 权重。
 
 这些依赖在部署时从各上游安装，本仓库分发安装与调用代码。
+
+## HunyuanVideo-Foley XXL 私有部署依赖
+
+- 上游实现：[Tencent-Hunyuan/HunyuanVideo-Foley](https://github.com/Tencent-Hunyuan/HunyuanVideo-Foley)
+  `df7b005b5023df2a9b73e1d66dd51d452799884e`
+- XXL 权重：[tencent/HunyuanVideo-Foley](https://huggingface.co/tencent/HunyuanVideo-Foley)
+  `3abd4e833b95b8db0fc9c687afc52483a48e9a97`
+- 上游许可证：[Tencent Hunyuan Community License Agreement](https://github.com/Tencent-Hunyuan/HunyuanVideo-Foley/blob/main/LICENSE)
+- 部署依赖包含 SigLIP2 与 CLAP 编码器，固定版本见 Colab 安装脚本。
+
+上游实现和权重由 Windows WSL 与 Colab 部署环境读取。本仓库分发独立编写的 HTTP 插件和推理适配代码。

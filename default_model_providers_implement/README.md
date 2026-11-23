@@ -207,6 +207,16 @@ Core 控制租约释放或服务关闭时，由同一个 `exclusive_gpu` 调度�
 Sharp FP8 与 VAE 优先从 [ModelScope 镜像](https://www.modelscope.cn/models/numz/SeedVR2_comfyUI) 下载，不把
 第三方代码或权重提交到本仓库。
 
+### HunyuanVideo-Foley XXL Runtime
+
+`/hunyuan-foley/generations` 接受 MP4 字节、1–1000 字的音效描述与 63 位 seed。型号固定 XXL，使用官方
+offload、50 步与 CFG 4.5，从 1–15 秒的画面生成 48 kHz 单声道 PCM WAV，按视频轨时长对齐末尾样本。
+任务走 `exclusive_gpu`，每次启动独立 worker，结束后释放显存。
+
+Windows 在 Ubuntu WSL 中复用 `~/miniforge3/envs/hunyuan_foley/bin/python` 和已缓存的 SigLIP2、CLAP。
+上游源码目录 `HunyuanVideo-Foley` 与权重目录 `models/tencent/HunyuanVideo-Foley` 位于部署仓库的上一级。
+Colab 在后台安装独立环境、XXL 和配套编码器，节点状态报告就绪情况。运行时离线读取权重。
+
 ### YuE2 Runtime
 
 `yue2` 服务实现 `/yue2/generations` 的提交、状态、`/abort` 与 `/audio/{id}` 产物读取。请求只接受风格描述（1–1000 字）、

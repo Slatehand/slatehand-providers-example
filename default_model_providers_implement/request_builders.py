@@ -352,6 +352,28 @@ def prepare_stable_audio_3(payload: Any):
     return lambda record: _write_request(record, request)
 
 
+def prepare_hunyuan_foley(payload: Any):
+    data = object_fields(payload, required={"video", "prompt", "seed"})
+    video = object_fields(data["video"], required={"mime", "base64"})
+    if video["mime"] != "video/mp4":
+        raise RequestError("视频音效只接受 MP4。")
+    content = encoded_bytes(video["base64"], "video.base64", maximum=512 * 1024 * 1024)
+    if len(content) < 12 or content[4:8] != b"ftyp":
+        raise RequestError("视频音效输入不是真实 MP4。")
+    prompt = string(data["prompt"], "prompt", maximum=1000).strip()
+    if not prompt:
+        raise RequestError("音效描述不能为空。")
+    seed = integer(data["seed"], "seed", minimum=0, maximum=2**63 - 1)
+
+    def prepare(record: TaskRecord) -> None:
+        (Path(record.task_dir) / "input.mp4").write_bytes(content)
+        _write_request(
+            record, {"schema": "hunyuan_foley_request_v1", "prompt": prompt, "seed": seed}
+        )
+
+    return prepare
+
+
 def prepare_yue2(payload: Any):
     """校验 YuE2 歌曲请求。内部乐谱模式、CFG 与采样参数由 runtime 固定。"""
 
