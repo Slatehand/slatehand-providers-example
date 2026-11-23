@@ -246,13 +246,14 @@ GPU 或依赖失败直接返回任务错误。
 
 ## Mac Codex / AGY image
 
-Slatehand 自己的 `.venv` 安装 `codex` optional dependency 后执行：
+在本仓库 `.venv` 安装 `.[services]` 后，可以通过 `python3 scripts/mac_node.py up` 独立启动，
+或者通过以下脚本注册 LaunchAgent：
 
 ```text
 default_model_providers_implement/macos/install_launch_agent.sh
 ```
 
-LaunchAgent 名为 `com.slatehand.codex-image`，只监听 `127.0.0.1:8792`，启用
+LaunchAgent 名为 `com.slatehand.codex-image`。两种方式均只监听 `127.0.0.1:8792`，启用
 `codex_image_generate,codex_image_edit,agy_image_generate,agy_image_edit,demucs_audio_separation`。图片生成与编辑是独立 HTTP 用法：`/codex/image-generations` 和 `/agy/image-generations` 接受零到五张
 辅助参考并重新生成构图；`/codex/image-edits` 和 `/agy/image-edits` 要求一张不可省略的底图，并最多接受四张附加参考。Codex
 worker 使用 read-only sandbox 和 ephemeral thread；编辑模式明确要求保留底图中未被修改的空间结构。
@@ -283,7 +284,8 @@ Mac 启动脚本把本机能力拆成两个调度 lane：`network_image`（`code
 ### Mac 视频音轨分离
 
 首次使用前执行 `default_model_providers_implement/macos/install_demucs.sh`，它只在仓库忽略的
-`.demucs-venv/` 安装 Demucs 4 与 PyTorch。模型权重由 PyTorch 缓存管理，不进入仓库或 Core 协议。
+`.demucs-venv/` 安装 Demucs 4 与 PyTorch。模型权重默认由 PyTorch 缓存到仓库忽略的
+`var/demucs-torch/`，可以用 `TORCH_HOME` 配置缓存位置。
 `/demucs/audio-separations` 接受 MP4 字节和固定的 `voice` / `background` stem；worker 用 FFmpeg
 提取 44.1 kHz 双声道音频，在本机 CPU/MPS 可用环境运行 `htdemucs`，并用标准 16-bit PCM 写回 WAV，
 不依赖 TorchCodec。`background` 是 no-vocals residual，包含音乐、环境声与音效。

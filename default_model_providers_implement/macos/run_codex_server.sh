@@ -19,6 +19,7 @@ export SLATEHAND_AGY_OUTPUT_ROOT="${SLATEHAND_AGY_OUTPUT_ROOT:-$HOME/.gemini/ant
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 export SLATEHAND_FFPROBE="${SLATEHAND_FFPROBE:-/opt/homebrew/bin/ffprobe}"
 export SLATEHAND_DEMUCS_PYTHON="${SLATEHAND_DEMUCS_PYTHON:-$repository_root/.demucs-venv/bin/python}"
+export TORCH_HOME="${TORCH_HOME:-$repository_root/var/demucs-torch}"
 
 exec "$python" -m default_model_providers_implement.server \
     --host 127.0.0.1 \

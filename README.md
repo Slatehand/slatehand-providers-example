@@ -106,6 +106,20 @@ sequenceDiagram
 
 `SLATEHAND_AUTOSTART_MAC_PROVIDER=0` 时不安装 LaunchAgent（非 macOS 上始终不安装）。
 
+## Mac 节点
+
+工作区位于外置盘时，在 `provider.local.env` 设置 `SLATEHAND_AUTOSTART_MAC_PROVIDER=0`，
+从已获外置盘访问权限的终端启动 Mac Provider。服务监听 `127.0.0.1:8792`，任务与日志保存在
+`var/codex-image-provider/`，Demucs 权重默认保存在 `var/demucs-torch/`。
+
+```bash
+python3 scripts/mac_node.py up
+python3 scripts/mac_node.py status
+python3 scripts/mac_node.py down
+```
+
+服务在后台独立运行，退出终端或关闭 Core 后仍可使用。Mac 重启后通过 `up` 重新启动。
+
 ## Windows 节点
 
 Windows GPU 服务由人手动启动，Core 只连接：
