@@ -126,15 +126,17 @@ Windows 节点单独占一个终端。服务未启动时 Core 照常启动，Win
 提供 `create_bundle(context) -> ProviderBundle`，从 `context.provider_directory` 读取自己的配置。步骤与代码骨架见
 Core 仓库的 `slatehand-provider-plugin` Skill（`.agents/skills/slatehand-provider-plugin/`）。
 
-## Colab 节点（H3、Breeze TTS 2）
+## Colab 节点
 
-H3 与 Breeze TTS 2 可同时接入本地 Windows 与 Colab（G4，RTX PRO 6000 96 GB）两个节点，在 Provider 设置页
-各自的「运行节点」切换。切换只影响新提交；运行中的任务按句柄回到提交时的节点，两个节点互不排斥。
+Colab G4 提供 H3 视频、SeedVR2 超分、Qwen Image 生图与改图、Breeze 音色设计与克隆、IndexTTS2.5 克隆、
+Stable Audio 3 音频生成、YuE2 歌曲生成、Demucs 音轨分离和 Whisper 转写。用各插件的「运行节点」选择
+Colab G4。异步任务的查询、取消和产物读取仍按句柄回到提交时的节点。Codex 和 AGY 图片插件使用 Mac 上
+已经认证的客户端，Colab 的生图与改图由 Qwen Image 执行。
 
 - 接入条件：`var/secrets/colab-model-service-token` 存在，且 `provider.local.env` 设置 `SLATEHAND_COLAB_SESSION`。
   Core 运行期间由 bundle 服务维持 `colab ssh` 隧道（本机 `127.0.0.1:18791` → VM `127.0.0.1:8791`）。
   只在 `colab sessions` 列出该会话时才连接，避免 `colab ssh` 自动开出新的计费 VM；会话不在线时 Core 照常启动，
-  H3 的 Colab 提交保留在本机等待连接恢复，Breeze 的 Colab 提交会连接失败。
+  H3 的 Colab 提交保留在本机等待连接恢复，其它 Colab 提交会报告连接错误。
 - H3 的 Colab 提交先在 bundle 运行目录 `h3-submissions/colab/` 保存冻结请求并返回句柄，再由 Core 的观察流程上传。
   断线后继续刷新同一 Generation：先查原标识，尚未受理才按原标识与原请求重放；不会创建新的 Generation。
   上传网络超时为 120 秒。受理后只保留轻量回执；已确认的远端任务丢失时明确失败，不重新生成。
@@ -147,15 +149,15 @@ H3 与 Breeze TTS 2 可同时接入本地 Windows 与 Colab（G4，RTX PRO 6000 
   是否就绪、任务数与后台下载进度，本机补充 Core 隧道是否连通）；`down` 回收 VM。Core 不启停 VM、不对 Colab 维持租约。
   每台 Colab 运行时同时只允许一个 `colab ssh` 连接，Core 运行时由隧道占用，所以脚本的远程命令走 kernel 通道
   （`colab exec`）、文件走 `colab upload`，Core 开着也能开机部署；手工 `colab ssh` 调试需先停 Core。
-- 权重每次开机都从固定 commit 的 Hugging Face 仓库下载到 VM 本地盘，不需要 Google Drive：与 Windows 节点
-  同一套 DaSiWa Hybrid V2 / Turbo V2 int8（`kogehek/DaSiWa_MiniMax_H3`，与 Civitai 发布的 SHA256 一致）、官方
-  Pruned BF16、NVFP4 文本编码器与视频/音频 VAE（`Comfy-Org/MiniMax-H3`）、SelfLift 放大器
-  （`LBH-123-AI/Minimax_h3_latent_Upscaler`）和 Breeze-TTS-2（`BreezeBlue/Breeze-TTS-2`）。`colab/fetch_progress.py`
-  按 64 MB 分块、16 个连接并行下载（实测约 1.5 GB/s，Drive 挂载约 0.1 GB/s）。
-- 开机分两段：前台只下载 Turbo V2 及其共用权重（约 43 GB）就启动服务；Breeze、Hybrid V2 与官方 BF16 在后台
-  依次下载，完整下载并核对大小后才链接进模型目录。进度以 GB、速度与预计剩余时间显示，本机由
-  `scripts/progress_view.py` 渲染成原地刷新的进度条；后台写入 `/content/slatehand-state/setup-background.log`，
-  `scripts/colab_node.sh status` 显示最新几行。尚未下载完的模型被调用时任务直接失败并提示稍后重试。
+- 冷启动先准备 H3 Turbo V2 及共用权重，约 43 GB，随后启动模型服务。后台先准备 Breeze、Qwen Image、
+  SeedVR2、IndexTTS2.5、YuE2、Demucs、Whisper 与 Stable Audio 3。基础能力全部就绪后，依次下载
+  **Hybrid V2 → 官方 Pruned BF16（FL2VA 与 Ref2VA）**。仅接入 Colab 时，H3 默认选 Turbo V2。
+  基础阶段失败时继续尝试其它基础能力，并延后可选权重。
+  再次运行 `up` 会重试未完成的阶段。下载后的权重缓存于 VM 本地盘。
+- [Stable Audio 3 Medium](https://huggingface.co/stabilityai/stable-audio-3-medium) 权重需要下载权限。
+  将有权限的 Hugging Face Token 放入 Git 忽略的 `var/secrets/colab-huggingface-token`，`up` 会同步到 VM。
+- 状态面板显示各模型就绪情况及后台准备结果。下载进度与失败详情写入 VM 的
+  `/content/slatehand-state/setup-background.log`。尚未就绪的模型调用会返回任务错误。
 
 ## Breeze-TTS-2 接入
 

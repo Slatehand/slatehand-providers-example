@@ -47,6 +47,7 @@ from .runners import (
 )
 from .strict_json import RequestError
 from .task_store import TaskRecord, TaskStore
+from .whisper_runner import MAX_WAV_BYTES, transcribe
 
 MAX_REQUEST_BYTES = 700 * 1024 * 1024
 TASK_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -77,6 +78,7 @@ class ModelApiServer(ThreadingHTTPServer):
         exit_when_controller_lost: bool = False,
         max_concurrent_tasks: int = 1,
         lanes: tuple[LaneSpec, ...] | None = None,
+        whisper_asr: bool = False,
     ) -> None:
         self.enabled_services = enabled_services or {
             "mock",
@@ -95,6 +97,7 @@ class ModelApiServer(ThreadingHTTPServer):
             "qwen_image",
         }
         self.auth_token = auth_token
+        self.whisper_lock = threading.Lock() if whisper_asr else None
         self.store = TaskStore(root)
         self.h3_submission_lock = threading.Lock()
         h3_fl2va_runtime = create_h3_fl2va_comfy_core_runner(root / "resident-runtimes")
@@ -162,6 +165,23 @@ class ModelApiHandler(BaseHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         try:
+            if path == "/whisper/transcriptions":
+                lock = self.server.whisper_lock
+                if lock is None:
+                    raise DisabledServiceError
+                payload = self._read_json(maximum=(MAX_WAV_BYTES * 4 // 3) + 128)
+                if not lock.acquire(blocking=False):
+                    self._json(503, {"message": "Whisper 正在转写，请稍后重试。"})
+                    return
+                try:
+                    text = transcribe(payload)
+                except (RuntimeError, subprocess.TimeoutExpired) as exc:
+                    self._json(503, {"message": str(exc)})
+                else:
+                    self._json(200, {"text": text})
+                finally:
+                    lock.release()
+                return
             if path == "/control/controller-lease/acquire":
                 controller = self.server.controller_lease
                 if controller is None:
@@ -653,7 +673,7 @@ class ModelApiHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
         self.close_connection = True
 
-    def _read_json(self) -> Any:
+    def _read_json(self, *, maximum: int = MAX_REQUEST_BYTES) -> Any:
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
         if content_type != "application/json":
             raise RequestError("Content-Type 必须是 application/json。")
@@ -664,7 +684,7 @@ class ModelApiHandler(BaseHTTPRequestHandler):
             length = int(raw_length)
         except ValueError as exc:
             raise RequestError("Content-Length 不合法。") from exc
-        if not 0 < length <= MAX_REQUEST_BYTES:
+        if not 0 < length <= maximum:
             raise RequestError("请求 body 大小不合法。")
         try:
             return json.loads(self.rfile.read(length))
@@ -984,6 +1004,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="已持有的控制租约被释放或超时后退出服务进程（退出码 0）。",
     )
+    parser.add_argument(
+        "--whisper-asr",
+        action="store_true",
+        help="启用使用部署方固定 whisper.cpp CLI 与模型文件的同步 WAV 转写。",
+    )
     return parser
 
 
@@ -1080,6 +1105,7 @@ def main(argv: list[str] | None = None) -> int:
         exit_when_controller_lost=args.exit_when_controller_lost,
         max_concurrent_tasks=max_concurrent_tasks,
         lanes=lanes,
+        whisper_asr=args.whisper_asr,
     )
     pid_file = args.state_root.resolve() / "service.pid"
     temporary_pid = pid_file.with_suffix(".pid.tmp")

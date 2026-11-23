@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from core.model_providers.http import HttpTransport
 from core.model_providers.registry import PluginInstance
 
 from .manifest import MANIFEST
 from .provider import WhisperASRProvider
 
 
-def plugin_instance(endpoint: str) -> PluginInstance:
-    provider = WhisperASRProvider(endpoint)
+def plugin_instance(endpoint: str, transport: HttpTransport | None = None) -> PluginInstance:
+    provider = WhisperASRProvider(endpoint, transport)
     return PluginInstance(
         MANIFEST, endpoint=endpoint, recipes={recipe.id: provider for recipe in MANIFEST.recipes}
     )

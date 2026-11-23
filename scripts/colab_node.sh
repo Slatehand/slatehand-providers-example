@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 手动开关 Colab G4 节点（H3 + Breeze TTS 2）。权重从 Hugging Face 多连接下载，不需要 Google Drive。
+# 手动开关 Colab G4 模型节点。权重从 Hugging Face 多连接下载，不需要 Google Drive。
 #
 #   scripts/colab_node.sh up       开机（缺会话时创建 G4）→ 同步代码与 Token → 安装环境、下载 Turbo 权重 →
 #                            启动模型服务 → 进入状态面板。代码未变化且服务在运行时跳过部署与重启。
@@ -8,7 +8,7 @@
 #   scripts/colab_node.sh watch    持续刷新状态面板（up 结束后自动进入；Ctrl-C 只退出查看）
 #   scripts/colab_node.sh down     回收 VM（VM 本地环境与权重缓存清空；下次 up 重建）
 #
-# Core 运行时会自动经 colab ssh 建立隧道；在 Provider 设置页把 H3 / Breeze 的「运行节点」切到
+# Core 运行时会自动经 colab ssh 建立隧道；在 Provider 设置页把相应插件的「运行节点」切到
 # Colab G4 即可使用。会话名取本仓库 provider.local.env 的 SLATEHAND_COLAB_SESSION。
 set -euo pipefail
 trap 'echo "colab_node.sh 第 ${LINENO} 行失败（退出码 $?），已中止。" >&2' ERR
@@ -16,6 +16,7 @@ trap 'echo "colab_node.sh 第 ${LINENO} 行失败（退出码 $?），已中止�
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 cd "$REPO"
 TOKEN=var/secrets/colab-model-service-token
+HF_TOKEN_FILE=var/secrets/colab-huggingface-token
 SESSION=${SLATEHAND_COLAB_SESSION:-$(sed -n 's/^SLATEHAND_COLAB_SESSION=//p' provider.local.env 2>/dev/null | tr -d "'\"" | tail -n 1)}
 SESSION=${SESSION:-slate}
 COLAB=${SLATEHAND_COLAB_CLI:-colab}
@@ -59,6 +60,27 @@ remote_retry() {
     sleep 2
   done
 }
+# 更新部署前停止旧安装器的进程组，保留已完成的权重和正在执行的模型任务。
+stop_background_setup() {
+  remote_retry "set -e
+    pid=\$(cat /content/slatehand-state/setup-background.pid 2>/dev/null || true)
+    case \"\$pid\" in ''|*[!0-9]*) exit 0 ;; esac
+    command=\$(ps -p \"\$pid\" -o args= 2>/dev/null || true)
+    group=\$(ps -p \"\$pid\" -o pgid= 2>/dev/null | tr -d ' ' || true)
+    case \"\$command\" in
+      *' $1 --background') ;;
+      *) exit 0 ;;
+    esac
+    [ \"\$group\" = \"\$pid\" ] || exit 1
+    kill -TERM -- \"-\$pid\" 2>/dev/null || true
+    for attempt in \$(seq 1 20); do
+      if ! kill -0 -- \"-\$pid\" 2>/dev/null; then exit 0; fi
+      sleep 1
+    done
+    echo '等待旧后台安装退出超时。' >&2
+    exit 1"
+}
+
 session_running() { "$COLAB" sessions 2>/dev/null | grep -q "^\[$SESSION\] "; }
 
 # 状态面板的行：远端服务、GPU、权重、任务与后台下载，加上本机到 Colab 的隧道（Core 经它提交）。
@@ -83,9 +105,10 @@ panel_rows() {
 main() {
   case "${1:-}" in
     up)
-      local archive digest status deployed server
+      local archive digest status deployed server setup
       deployed=$REMOTE/.deployed-sha256
       server=$REMOTE/default_model_providers_implement/colab/run_server.sh
+      setup=$REMOTE/default_model_providers_implement/colab/setup.sh
       if [ ! -s "$TOKEN" ]; then
         mkdir -p "$(dirname "$TOKEN")"
         (umask 077 && openssl rand -hex 32 > "$TOKEN")
@@ -96,6 +119,11 @@ main() {
         "$COLAB" new -s "$SESSION" --gpu G4
       fi
       echo "==> 同步代码与 Token"
+      if [ -s "$HF_TOKEN_FILE" ]; then
+        remote_retry "umask 077; touch /root/.slatehand-colab-hf-token && chmod 600 /root/.slatehand-colab-hf-token"
+        "$COLAB" upload -s "$SESSION" "$HF_TOKEN_FILE" /root/.slatehand-colab-hf-token >/dev/null
+        remote_retry "chmod 600 /root/.slatehand-colab-hf-token"
+      fi
       archive=$(mktemp -t slatehand-colab)
       trap "$(printf 'rm -f %q' "$archive")" EXIT
       # gzip -n 不写时间戳：代码不变则包的哈希不变，可判断是否需要重新部署。
@@ -103,16 +131,18 @@ main() {
       digest=$(shasum -a 256 "$archive" | cut -d' ' -f1)
       if remote_retry "[ \"\$(cat $deployed 2>/dev/null)\" = $digest ] && bash $server status >/dev/null" >/dev/null; then
         echo "代码未变化且模型服务运行中，跳过部署与重启（不打断运行中的任务）。"
+        remote_retry "bash $setup --ensure-background"
       else
         status=$?
         if [ "$status" -ne 1 ]; then return "$status"; fi
         "$COLAB" upload -s "$SESSION" "$archive" /content/slatehand-providers.tar.gz >/dev/null
         "$COLAB" upload -s "$SESSION" "$TOKEN" /root/.slatehand-colab-token >/dev/null
+        stop_background_setup "$setup"
         remote "chmod 600 /root/.slatehand-colab-token && rm -rf $REMOTE/default_model_providers_implement && mkdir -p $REMOTE && tar -xzf /content/slatehand-providers.tar.gz -C $REMOTE"
         echo "==> 安装环境、下载 Turbo 所需权重（其余权重随后在后台下载）"
         # 先完成旧服务的停止，再重试可重复执行的 start，避免启动成功后丢回执导致再停一次。
         remote "set -e
-          SLATEHAND_PROGRESS_INTERVAL=3 bash $REMOTE/default_model_providers_implement/colab/setup.sh
+          SLATEHAND_PROGRESS_INTERVAL=3 bash $setup
           if bash $server status >/dev/null; then
             bash $server stop >/dev/null
             for attempt in \$(seq 1 30); do

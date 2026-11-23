@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Colab VM：启动或停止只含 H3 FL2VA/Ref2VA 与 Breeze TTS 2 的模型服务。只绑定回环地址，Core 经
+# Colab VM：启动或停止 Colab 模型服务。只绑定回环地址，Core 经
 # colab ssh 隧道访问。VM 的开关由人手动管理（scripts/colab_node.sh），这里不做租约或自动回收。
 # 用法：run_server.sh start|stop|status
 set -euo pipefail
@@ -26,10 +26,24 @@ case "${1:-}" in
     SLATEHAND_BREEZE_PYTHON=/content/breeze-venv/bin/python \
     SLATEHAND_BREEZE_REPOSITORY=/content/breeze-tts \
     SLATEHAND_BREEZE_MODEL=/content/models/Breeze-TTS-2 \
+    SLATEHAND_INDEXTTS2_ROOT=/content/index-tts \
+    SLATEHAND_INDEXTTS2_MODEL_ROOT=/content/models/IndexTTS-2.5 \
+    SLATEHAND_SEEDVR2_ROOT=/content/seedvr2 \
+    SLATEHAND_SEEDVR2_MODEL_ROOT=/content/models/SeedVR2 \
+    SLATEHAND_SEEDVR2_PYTHON=/content/seedvr2/.venv/bin/python \
+    SLATEHAND_YUE2_PYTHON=/content/yue2-venv/bin/python \
+    SLATEHAND_YUE2_MODELS=/content/models \
+    SLATEHAND_STABLE_AUDIO_PYTHON=/content/stable-audio-3-venv/bin/python \
+    SLATEHAND_DEMUCS_PYTHON=/content/demucs-venv/bin/python \
+    SLATEHAND_WHISPER_CLI=/content/whisper.cpp/build/bin/whisper-cli \
+    SLATEHAND_WHISPER_MODEL=/content/models/ggml-large-v3-turbo-q5_0.bin \
+    HF_HOME=/content/stable-audio-3-hf \
+    TORCH_HOME=/content/demucs-torch \
     PYTHONPATH="$REPO" \
       setsid nohup python3 -m default_model_providers_implement.server \
         --host 127.0.0.1 --port "$PORT" --state-root "$STATE" \
-        --services h3_fl2va,h3_ref2va,breeze_tts_2 --resource-name exclusive_gpu \
+        --services h3_fl2va,h3_ref2va,breeze_tts_2,indextts2,seedvr2_7b_sharp_fp8,qwen_image,yue2,stable_audio_3,demucs_audio_separation \
+        --resource-name exclusive_gpu --whisper-asr \
         --auth-token-env SLATEHAND_MODEL_SERVICE_TOKEN \
         > "$STATE/server.log" 2>&1 &
     echo $! > "$PID_FILE"

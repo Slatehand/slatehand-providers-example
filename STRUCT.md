@@ -15,12 +15,12 @@
 - `bundle.py`：`example` bundle：按部署配置安装 Mac、whisper.cpp 与 Windows 节点上的插件，并组装随 Core 启停的服务。
 - `deployment.py`：读取 `provider.local.env`（未知键拒绝、进程环境优先）与 `var/secrets/` 中的 Windows Token。
 - `services.py`：随 Core 启停的服务：Mac LaunchAgent 与本机 whisper-server。
-- `colab_tunnel.py`：Colab H3 节点隧道（bundle 服务）：会话在线时经 `colab ssh` 把本机回环端口转发到 VM 模型服务，断开自动重连。
+- `colab_tunnel.py`：Colab 模型节点隧道（bundle 服务）：会话在线时经 `colab ssh` 把本机回环端口转发到 VM 模型服务，断开自动重连。
 - `plugins/`：具体模型插件，只 import Provider SDK。每个插件子目录都有 `README.md`（用法与契约）、`provider.py`（请求翻译与 submit/observe/cancel/read_artifact）
   和导出用 `__init__.py`；可绑定的插件另有 `manifest.py`（recipe、槽位、参数、设置）与 `plugin.py`（`plugin_instance` 安装工厂）：
   - `agy_image/`：AGY 图片生成/编辑。
   - `codex_image/`：Codex 图片生成/编辑；`prompt_lint.py` 返回格式软提示，`skills/codex-image-prompt-writing/` 随包交付模型写作规范。
-  - `nodes.py`：H3 与 Breeze 共用的运行节点路由（本地 Windows / Colab，设置 `node` 选择新提交的节点）。
+  - `nodes.py`：多节点插件共用的路由（设置 `node` 选择新提交的节点，异步句柄保留提交节点）。
   - `breeze_tts2/`：Breeze TTS 2 音色设计与克隆/导演。
   - `indextts2/`：IndexTTS2.5 参考音色克隆，语速与八维情感由 manifest 声明。
   - `whisper_asr/`：whisper.cpp 参考音频转写。
@@ -56,16 +56,18 @@
 - `seedvr2_worker.py`：SeedVR2 超分常驻 worker。
 - `codex_worker.py`、`agy_worker.py`：Codex / AGY 图片 worker（Mac）。
 - `demucs_audio_worker.py`：音轨分离（Mac）。
-- `stable_audio_3_worker.py`：Stable Audio 3 Medium 一次性生成（Windows 服务通过 WSL 调用）。
-- `yue2_worker.py`：YuE2-3B 一次性歌曲生成（Windows 服务通过 WSL 调用）；歌词为空时先把乐谱人声旋律移到器乐声部，并把超长乐谱按整段收到 300 秒内。
+- `stable_audio_3_worker.py`：Stable Audio 3 Medium 一次性生成（Windows 经 WSL、Colab 直接运行）。
+- `yue2_worker.py`：YuE2-3B 一次性歌曲生成（Windows 经 WSL、Colab 直接运行）；歌词为空时先把乐谱人声旋律移到器乐声部，并把超长乐谱按整段收到 300 秒内。
 - `yue2_instrumental/`：YuE2 官方纯音乐转谱脚本（MIT，原样，不参与 ruff）。
 - `requirements-codex-image.txt`：私有图片服务依赖。
 - `macos/install_launch_agent.sh`、`macos/launch-agent.plist.template`、`macos/run_codex_server.sh`：Mac 媒体服务 LaunchAgent 安装与启动。
 - `macos/install_demucs.sh`：Demucs 独立虚拟环境安装。
-- `colab/setup.sh`：Colab VM 上安装固定 revision 的 ComfyUI 与 SelfLift、H3 依赖；前台只下载 Turbo V2 及共用权重，后台再装 Breeze TTS 2（固定 revision、独立 venv）并下载 Hybrid V2 与官方 BF16；权重来自固定 commit 的 Hugging Face 仓库，均按 Windows 同名链接进 models。
+- `colab/setup.sh`：前台准备 H3 Turbo V2 与共用权重，后台先准备其余能力，最后下载 Hybrid V2 与官方 BF16。
+- `colab/setup_models.sh`：Colab 其余模型的固定版本、权重与独立运行环境。
+- `whisper_runner.py`：Colab 同步 WAV 转写，使用部署时固定的 whisper.cpp CLI 和模型。
 - `colab/node_status.py`：Colab 节点状态（模型服务、GPU、各权重是否就绪、任务、后台下载），供 `scripts/colab_node.sh status/watch` 远程调用。
 - `colab/fetch_progress.py`：从 Hugging Face 多连接分块下载权重，以 GB、速度与预计剩余时间显示进度。
-- `colab/run_server.sh`：Colab VM 上启停只含 H3 与 Breeze 的模型服务（回环地址 + Bearer Token）；VM 由 `scripts/colab_node.sh` 手动开关。
+- `colab/run_server.sh`：Colab VM 上启停模型服务（回环地址 + Bearer Token）；VM 由 `scripts/colab_node.sh` 手动开关。
 - `windows/install_scheduled_task.ps1`、`uninstall_scheduled_task.ps1`：Windows 计划任务安装与卸载。
 - `windows/run_server.ps1`：Windows 服务启动。
 - `windows/service_status.ps1`、`windows/stop_services.ps1`：状态查看与停止。

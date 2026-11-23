@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import uuid
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from core.model_providers.boundary import ModelProviderError
+from core.model_providers.http import HttpTransport, require_success
 from core.model_providers.recipe import RecipeRequest
 
 
@@ -52,12 +54,24 @@ class WhisperASRProvider:
     def execute_recipe(self, request: RecipeRequest) -> WhisperASRResult:
         return self.transcribe(to_request(request))
 
-    def __init__(self, endpoint: str) -> None:
+    def __init__(self, endpoint: str, transport: HttpTransport | None = None) -> None:
         self._endpoint = endpoint.rstrip("/")
+        self._transport = transport
 
     def transcribe(self, request: RecipeRequest | WhisperASRRequest) -> WhisperASRResult:
         if not isinstance(request, WhisperASRRequest):
             request = to_request(request)
+        if self._transport is not None:
+            response = self._transport.request(
+                "POST",
+                f"{self._endpoint}/whisper/transcriptions",
+                json_body={
+                    "audio_b64": base64.b64encode(request.audio).decode("ascii"),
+                    "language": request.language,
+                },
+                timeout=600.0,
+            )
+            return _result(require_success(response, {200}))
         body, content_type = _multipart_body(request)
         http_request = Request(
             f"{self._endpoint}/inference",
@@ -93,16 +107,16 @@ class WhisperASRProvider:
             raise ModelProviderError(
                 "invalid_response", "Whisper ASR 返回的 JSON 不合法。"
             ) from exc
-        if (
-            not isinstance(value, dict)
-            or set(value) != {"text"}
-            or not isinstance(value["text"], str)
-        ):
-            raise ModelProviderError("invalid_response", "Whisper ASR 返回字段不合法。")
-        try:
-            return WhisperASRResult(value["text"].strip())
-        except ValueError as exc:
-            raise ModelProviderError("invalid_response", str(exc)) from exc
+        return _result(value)
+
+
+def _result(value: object) -> WhisperASRResult:
+    if not isinstance(value, dict) or set(value) != {"text"} or not isinstance(value["text"], str):
+        raise ModelProviderError("invalid_response", "Whisper ASR 返回字段不合法。")
+    try:
+        return WhisperASRResult(value["text"].strip())
+    except ValueError as exc:
+        raise ModelProviderError("invalid_response", str(exc)) from exc
 
 
 def _multipart_body(request: WhisperASRRequest) -> tuple[bytes, str]:

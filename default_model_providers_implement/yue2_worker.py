@@ -1,4 +1,4 @@
-"""YuE2-3B 一次性歌曲生成。由 Windows 模型服务通过 WSL 调用。"""
+"""YuE2-3B 一次性歌曲生成。用于 Windows WSL 和 Linux 模型节点。"""
 
 from __future__ import annotations
 

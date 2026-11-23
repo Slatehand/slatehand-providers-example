@@ -1,4 +1,4 @@
-"""Stable Audio 3 Medium 一次性生成。由 Windows 模型服务通过 WSL 调用。"""
+"""Stable Audio 3 Medium 一次性生成。用于 Windows WSL 和 Linux 模型节点。"""
 
 from __future__ import annotations
 

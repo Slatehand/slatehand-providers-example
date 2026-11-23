@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import math
+import os
 import shutil
 import sys
 from collections.abc import Callable
@@ -23,10 +24,10 @@ from default_model_providers_implement.sampling_progress import SamplingProgress
 
 from .runtime import ComfyCoreRuntime
 
-DIFFUSION_MODEL = "qwen\\NoctQ_V4_int8_convrot.safetensors"
+DIFFUSION_MODEL = os.path.join("qwen", "NoctQ_V4_int8_convrot.safetensors")
 DIFFUSION_LABEL = "NoctQ V4"
-TEXT_ENCODER = "qwen\\qwen3vl_8b_int8_convrot.safetensors"
-VAE = "qwen\\qwen_image_2.1_vae_bf16.safetensors"
+TEXT_ENCODER = os.path.join("qwen", "qwen3vl_8b_int8_convrot.safetensors")
+VAE = os.path.join("qwen", "qwen_image_2.1_vae_bf16.safetensors")
 SAMPLER = "euler"
 SCHEDULER = "simple"
 # 参考图送入文本编码器与 VAE 前缩放到约 1024² 像素（保持比例、32 对齐），与官方模板默认一致。

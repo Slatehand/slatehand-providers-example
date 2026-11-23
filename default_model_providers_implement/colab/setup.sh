@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-# Colab VM 安装，分两段，可重复执行（已完成的步骤跳过）：
-#   setup.sh               前台：安装固定 revision 的 ComfyUI 与 comfyui-SelfLift、H3 依赖，只下载 Turbo V2
-#                          及其共用权重（文本编码器、VAE、SelfLift 放大器），随后在后台拉起 --background 并返回，
-#                          调用方即可启动服务。
-#   setup.sh --background  后台：Breeze TTS 2（固定上游 revision、独立 Python 3.12 venv、模型），再依次下载
-#                          DaSiWa Hybrid V2 与官方 Pruned BF16。
+# Colab VM 安装。前台准备 H3 Turbo 和共用权重，随即可启动服务。
+# 后台先准备其它能力，最后才下载 H3 Hybrid V2 与官方 Pruned BF16。
 # 权重全部来自固定 commit 的 Hugging Face 仓库（DaSiWa 用与 Civitai 发布 SHA256 一致的转存），由
 # fetch_progress.py 多连接分块下载到本地盘，完整下载并核对大小后才链接进 ComfyUI models，服务不会读到半截
 # 文件；尚未下载完的模型被调用时任务直接失败并提示稍后重试。不需要 Google Drive。本地盘缓存随 VM 回收。
@@ -17,9 +13,14 @@ CACHE=/content/models
 STATE=/content/slatehand-state
 BACKGROUND_PID=$STATE/setup-background.pid
 BACKGROUND_LOG=$STATE/setup-background.log
-mkdir -p "$CACHE" "$STATE"
+READY=$STATE/model-ready
+COLAB_DIR=$(cd "$(dirname "$0")" && pwd)
+SETUP_VERSION=$(sha256sum "$0" "$COLAB_DIR/setup_models.sh" | sha256sum | cut -d' ' -f1)
+# shellcheck source=setup_models.sh
+source "$COLAB_DIR/setup_models.sh"
+mkdir -p "$CACHE" "$READY"
 
-FETCH="python3 $(cd "$(dirname "$0")" && pwd)/fetch_progress.py"
+FETCH=$COLAB_DIR/fetch_progress.py
 HF=https://huggingface.co
 COMFY_ORG=$HF/Comfy-Org/MiniMax-H3/resolve/54472221d27c695fca9621b0c3ed52f06c4af707
 UPSCALER=$HF/LBH-123-AI/Minimax_h3_latent_Upscaler/resolve/3f941d5d182014dd5c0a5e16330420ee2d4aa0c6/minimax_h3_latent_upscaler_3d_conv_v1
@@ -32,18 +33,36 @@ complete() { [ -f "$1" ] && [ "$(stat -c %s "$1")" = "$2" ]; }
 # 先算出本阶段要下载的总量，再逐个下载（共用一条总进度），完整后才建立链接。
 stage_all() {
   local label=$1; shift
-  local total=0 done=0 entry cached url size link
+  local total=0 done=0 entry cached url size link available
   for entry in "$@"; do
     IFS='|' read -r cached url size link <<< "$entry"
-    complete "$cached" "$size" || total=$((total + size))
+    if ! complete "$cached" "$size"; then
+      rm -f "$cached.part"
+      total=$((total + size))
+    fi
   done
   if [ "$total" -gt 0 ]; then
+    available=$(df -PB1 "$CACHE" | awk 'NR == 2 {print $4}')
+    if [ "$available" -lt "$total" ]; then
+      echo "$(date +%T) ${label}：可用空间不足（剩余 ${available} 字节，需 ${total} 字节）。" >&2
+      return 1
+    fi
     echo "$(date +%T) ${label}：需下载 $(awk "BEGIN{printf \"%.1f\", $total/1073741824}") GB"
   fi
   for entry in "$@"; do
     IFS='|' read -r cached url size link <<< "$entry"
     if ! complete "$cached" "$size"; then
-      $FETCH "$url" "$cached.part" --size "$size" --label "$label" --done "$done" --total "$total"
+      mkdir -p "$(dirname "$cached")"
+      if [ "$size" -lt 67108864 ]; then
+        curl --fail --silent --show-error --location --retry 3 -o "$cached.part" "$url"
+      else
+        python3 "$FETCH" "$url" "$cached.part" --size "$size" --label "$label" --done "$done" --total "$total"
+      fi
+      if ! complete "$cached.part" "$size"; then
+        echo "${label}：${cached##*/} 下载大小不符。" >&2
+        rm -f "$cached.part"
+        return 1
+      fi
       mv "$cached.part" "$cached"
       done=$((done + size))
     fi
@@ -83,13 +102,19 @@ foreground() {
     "$CACHE/minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors|$UPSCALER/minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors|690592672|latent_upscale_models/minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors"
   python3 -c "import torch, sageattention, comfy_aimdo; assert torch.cuda.is_available(); print('H3 Turbo 就绪：', torch.__version__, torch.cuda.get_device_name(0))"
 
+  ensure_background
+}
+
+ensure_background() {
+  if [ "$(cat "$READY/background" 2>/dev/null || true)" = "$SETUP_VERSION" ]; then
+    return
+  fi
   if [ -f "$BACKGROUND_PID" ] && kill -0 "$(cat "$BACKGROUND_PID")" 2>/dev/null; then
     echo "后台下载已在进行（日志 ${BACKGROUND_LOG}）。"
-  else
-    setsid nohup bash "$0" --background >> "$BACKGROUND_LOG" 2>&1 &
-    echo $! > "$BACKGROUND_PID"
-    echo "后台开始下载 Breeze、Hybrid V2 与官方 Pruned BF16（日志 ${BACKGROUND_LOG}）。"
+    return
   fi
+  setsid nohup bash "$0" --background </dev/null >> "$BACKGROUND_LOG" 2>&1 &
+  echo "后台准备其余能力，最后下载 H3 可选权重（日志 ${BACKGROUND_LOG}）。"
 }
 
 BREEZE_REV=008f769016b0a24711becd7a4925030bc93f608c
@@ -132,22 +157,63 @@ breeze() {
   "$BREEZE_VENV/bin/python" -c "import torch; assert torch.cuda.is_available(); print('Breeze 就绪：', torch.__version__, torch.cuda.get_device_capability(0))"
 }
 
+prepare_stage() {
+  local model=$1
+  if [ "$(cat "$READY/$model" 2>/dev/null || true)" = "$SETUP_VERSION" ]; then return; fi
+  echo "$(date +%T) 开始准备 ${model}。"
+  rm -f "$READY/$model"
+  if bash "$0" --stage "$model"; then
+    echo "$SETUP_VERSION" > "$READY/$model"
+    echo "$(date +%T) ${model} 就绪。"
+  else
+    echo "$(date +%T) ${model} 准备失败。" >&2
+    return 1
+  fi
+}
+
 background() {
-  echo "$(date +%T) ===== 后台下载开始"
-  # 独立进程运行，set -e 在其中生效；失败不影响后续 H3 权重。
-  bash "$0" --breeze || echo "$(date +%T) Breeze 安装失败，继续下载 H3 权重。"
+  local model failed=()
+  exec 9>"$STATE/setup-background.lock"
+  flock -n 9 || return 0
+  echo $$ > "$BACKGROUND_PID"
+  trap 'rm -f "$BACKGROUND_PID"' EXIT
+  rm -f "$READY/background"
+  echo "$(date +%T) ===== 后台准备开始"
+  command -v uv >/dev/null || python3 -m pip install -q uv
+  for model in breeze qwen_image seedvr2 indextts2 yue2 demucs whisper stable_audio_3; do
+    prepare_stage "$model" || failed+=("$model")
+  done
+  if [ "${#failed[@]}" -gt 0 ]; then
+    echo "$(date +%T) 能力准备失败：${failed[*]}。H3 可选权重等基础能力就绪后再下载。" >&2
+    return 1
+  fi
+  prepare_stage h3_hybrid
+  prepare_stage h3_bf16
+  echo "$SETUP_VERSION" > "$READY/background"
+  echo "$(date +%T) ===== 后台下载完成"
+}
+
+h3_hybrid() {
   stage_all "Hybrid V2 后台下载" \
     "$CACHE/DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors|$DASIWA/DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors|20967669160|$H3/DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors"
-  echo "$(date +%T) Hybrid V2 就绪。"
+}
+
+h3_bf16() {
   stage_all "官方 BF16 后台下载" \
     "$CACHE/minimax_h3_fl2va_pruned_bf16.safetensors|$COMFY_ORG/diffusion_models/minimax_h3_fl2va_pruned_bf16.safetensors|40225724176|$H3/minimax_h3_fl2va_pruned_bf16.safetensors" \
     "$CACHE/minimax_h3_ref2va_pruned_bf16.safetensors|$COMFY_ORG/diffusion_models/minimax_h3_ref2va_pruned_bf16.safetensors|40225724176|$H3/minimax_h3_ref2va_pruned_bf16.safetensors"
-  echo "$(date +%T) ===== 后台下载完成"
 }
 
 case "${1:-}" in
   "") foreground ;;
   --background) background ;;
-  --breeze) breeze ;;
+  --ensure-background) ensure_background ;;
+  --stage)
+    case "${2:-}" in
+      breeze|qwen_image|seedvr2|indextts2|yue2|demucs|whisper|stable_audio_3|h3_hybrid|h3_bf16)
+        "$2" ;;
+      *) echo "未知安装阶段。" >&2; exit 2 ;;
+    esac
+    ;;
   *) echo "用法：$0 [--background]" >&2; exit 2 ;;
 esac

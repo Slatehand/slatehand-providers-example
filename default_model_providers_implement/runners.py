@@ -408,33 +408,43 @@ def _create_comfy_core_runner(
 
 
 def create_indextts2_resident_runner(runtime_root: Path) -> ResidentProcessRunner:
-    """按需加载独立 WSL runtime，服从 exclusive_gpu 的切换与取消。"""
+    """在 WSL 或 Linux 中按需加载 IndexTTS2.5，随 exclusive_gpu 切换和取消。"""
     wsl = os.environ.get("SLATEHAND_WSL_EXE", r"C:\Windows\System32\wsl.exe")
     distribution = os.environ.get("SLATEHAND_WSL_DISTRIBUTION", "Ubuntu")
 
+    root = Path(os.environ.get("SLATEHAND_INDEXTTS2_ROOT", r"E:\Project\index-tts"))
+    model = Path(os.environ.get("SLATEHAND_INDEXTTS2_MODEL_ROOT", str(root / "checkpoints")))
+    path = _wsl_path if os.name == "nt" else str
+
     def command() -> list[str]:
+        python = os.environ.get("SLATEHAND_INDEXTTS2_PYTHON", path(root / ".venv/bin/python"))
+        worker = path(Path(__file__).resolve().with_name("indextts2_worker.py"))
+        args = [python, worker, "--serve", "--model-root", path(model)]
+        if sys.platform.startswith("linux"):
+            return args
         if os.name != "nt":
-            raise RuntimeError("默认 IndexTTS2.5 runtime 只能从 Windows 调用 WSL。")
-        root = Path(os.environ.get("SLATEHAND_INDEXTTS2_ROOT", r"E:\Project\index-tts"))
-        model = Path(os.environ.get("SLATEHAND_INDEXTTS2_MODEL_ROOT", str(root / "checkpoints")))
-        python = os.environ.get("SLATEHAND_INDEXTTS2_PYTHON", _wsl_path(root / ".venv/bin/python"))
+            raise RuntimeError("IndexTTS2.5 需要 Windows WSL 或 Linux 节点。")
         return [
             wsl,
             "--distribution",
             distribution,
             "--cd",
-            _wsl_path(root),
+            path(root),
             "--exec",
             "env",
             "HF_HUB_OFFLINE=1",
             "TRANSFORMERS_OFFLINE=1",
             "HF_HUB_DISABLE_TELEMETRY=1",
-            python,
-            _wsl_path(Path(__file__).with_name("indextts2_worker.py")),
-            "--serve",
-            "--model-root",
-            _wsl_path(model),
+            *args,
         ]
+
+    def environment() -> dict[str, str]:
+        return {
+            **os.environ,
+            "HF_HUB_OFFLINE": "1",
+            "TRANSFORMERS_OFFLINE": "1",
+            "HF_HUB_DISABLE_TELEMETRY": "1",
+        }
 
     def terminate_runtime(pid: int) -> None:
         subprocess.run(
@@ -452,8 +462,10 @@ def create_indextts2_resident_runner(runtime_root: Path) -> ResidentProcessRunne
         stderr_path=runtime_root / "indextts2.stderr.log",
         output_name="output.wav",
         media_type="audio/wav",
-        request_path=_wsl_path,
-        terminate_runtime=terminate_runtime,
+        request_path=path,
+        cwd_factory=lambda: str(root) if sys.platform.startswith("linux") else None,
+        environment_factory=environment,
+        terminate_runtime=terminate_runtime if os.name == "nt" else None,
     )
 
 
@@ -595,84 +607,77 @@ def _wsl_path(path: Path) -> str:
 def stable_audio_3_runner(
     record: TaskRecord, cancel: threading.Event, progress: Progress
 ) -> RunResult:
-    if os.name != "nt":
-        raise RuntimeError("Stable Audio 3 只在 Windows 模型服务里通过 WSL 执行。")
     python = os.environ.get(
-        "SLATEHAND_STABLE_AUDIO_PYTHON",
-        "/home/ljx/ai/stable-audio-3/.venv/bin/python",
+        "SLATEHAND_STABLE_AUDIO_PYTHON", "/home/ljx/ai/stable-audio-3/.venv/bin/python"
     )
-    pythonpath = os.environ.get(
-        "SLATEHAND_STABLE_AUDIO_PYTHONPATH",
-        "/mnt/e/Project/slatehand-providers-example",
-    )
-    distro = os.environ.get("SLATEHAND_WSL_DISTRIBUTION", "Ubuntu")
-    request_file = _wsl_path(Path(record.task_dir) / "request.json")
-    command = [
-        "wsl.exe",
-        "-d",
-        distro,
-        "--exec",
-        "env",
-        "HF_HUB_OFFLINE=1",
-        "TRANSFORMERS_OFFLINE=1",
-        "HF_HUB_DISABLE_TELEMETRY=1",
-        f"PYTHONPATH={pythonpath}",
-        python,
-        "-m",
-        "default_model_providers_implement.stable_audio_3_worker",
-        "--request-file",
-        request_file,
-    ]
-    return _module_runner(
+    return _audio_model_runner(
         record,
         cancel,
         progress,
-        module="default_model_providers_implement.stable_audio_3_worker",
+        module="stable_audio_3_worker",
         python=python,
-        output_name="output.wav",
-        media_type="audio/wav",
-        command=command,
+        wsl_pythonpath=os.environ.get("SLATEHAND_STABLE_AUDIO_PYTHONPATH"),
     )
 
 
 def yue2_runner(record: TaskRecord, cancel: threading.Event, progress: Progress) -> RunResult:
-    if os.name != "nt":
-        raise RuntimeError("YuE2 只在 Windows 模型服务里通过 WSL 执行。")
     python = os.environ.get("SLATEHAND_YUE2_PYTHON", "/home/ljx/ai/yue2/.venv/bin/python")
     models = os.environ.get("SLATEHAND_YUE2_MODELS", "/home/ljx/ai/models")
-    pythonpath = os.environ.get(
-        "SLATEHAND_YUE2_PYTHONPATH", "/mnt/e/Project/slatehand-providers-example"
+    return _audio_model_runner(
+        record,
+        cancel,
+        progress,
+        module="yue2_worker",
+        python=python,
+        wsl_pythonpath=os.environ.get("SLATEHAND_YUE2_PYTHONPATH"),
+        options=["--model-dir", f"{models}/YuE2-3B", "--vae-dir", f"{models}/YuE2-Vae"],
     )
-    distro = os.environ.get("SLATEHAND_WSL_DISTRIBUTION", "Ubuntu")
-    command = [
-        "wsl.exe",
-        "-d",
-        distro,
-        "--exec",
-        "env",
-        "HF_HUB_OFFLINE=1",
-        "TRANSFORMERS_OFFLINE=1",
-        "HF_HUB_DISABLE_TELEMETRY=1",
-        f"PYTHONPATH={pythonpath}",
-        python,
-        "-m",
-        "default_model_providers_implement.yue2_worker",
-        "--request-file",
-        _wsl_path(Path(record.task_dir) / "request.json"),
-        "--model-dir",
-        f"{models}/YuE2-3B",
-        "--vae-dir",
-        f"{models}/YuE2-Vae",
-    ]
+
+
+def _audio_model_runner(
+    record: TaskRecord,
+    cancel: threading.Event,
+    progress: Progress,
+    *,
+    module: str,
+    python: str,
+    wsl_pythonpath: str | None,
+    options: list[str] | None = None,
+) -> RunResult:
+    worker = f"default_model_providers_implement.{module}"
+    request = Path(record.task_dir) / "request.json"
+    if os.name == "nt":
+        distro = os.environ.get("SLATEHAND_WSL_DISTRIBUTION", "Ubuntu")
+        pythonpath = wsl_pythonpath or "/mnt/e/Project/slatehand-providers-example"
+        command = [
+            "wsl.exe",
+            "-d",
+            distro,
+            "--exec",
+            "env",
+            "HF_HUB_OFFLINE=1",
+            "TRANSFORMERS_OFFLINE=1",
+            "HF_HUB_DISABLE_TELEMETRY=1",
+            f"PYTHONPATH={pythonpath}",
+            python,
+            "-m",
+            worker,
+            "--request-file",
+            _wsl_path(request),
+        ]
+    elif sys.platform.startswith("linux"):
+        command = [python, "-m", worker, "--request-file", str(request)]
+    else:
+        raise RuntimeError("音频生成 runtime 需要 Windows WSL 或 Linux 节点。")
     return _module_runner(
         record,
         cancel,
         progress,
-        module="default_model_providers_implement.yue2_worker",
+        module=worker,
         python=python,
         output_name="output.wav",
         media_type="audio/wav",
-        command=command,
+        command=[*command, *(options or ())],
     )
 
 

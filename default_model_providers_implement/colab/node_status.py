@@ -15,6 +15,14 @@ MODELS = Path("/content/ComfyUI/models")
 H3 = MODELS / "diffusion_models" / "minimax-h3"
 WEIGHTS = (
     ("Turbo V2", (H3 / "DasiwaMinimaxH3_dasiwaHybridTurboV2_int8.safetensors",)),
+    ("Breeze", (STATE / "model-ready/breeze",)),
+    ("Qwen Image", (STATE / "model-ready/qwen_image",)),
+    ("SeedVR2", (STATE / "model-ready/seedvr2",)),
+    ("IndexTTS2.5", (STATE / "model-ready/indextts2",)),
+    ("YuE2", (STATE / "model-ready/yue2",)),
+    ("Demucs", (STATE / "model-ready/demucs",)),
+    ("Whisper", (STATE / "model-ready/whisper",)),
+    ("Stable Audio 3", (STATE / "model-ready/stable_audio_3",)),
     ("Hybrid V2", (H3 / "DasiwaMinimaxH3_dasiwaHybridV2_int8.safetensors",)),
     (
         "官方 BF16",
@@ -23,7 +31,6 @@ WEIGHTS = (
             H3 / "minimax_h3_ref2va_pruned_bf16.safetensors",
         ),
     ),
-    ("Breeze", (Path("/content/models/Breeze-TTS-2/model.safetensors.index.json"),)),
 )
 
 
@@ -81,7 +88,9 @@ def main() -> None:
     except (OSError, IndexError):
         last = "无"
     downloading = _alive(STATE / "setup-background.pid")
-    rows.append(("后台下载", last if downloading else "已结束"))
+    if not downloading and (STATE / "model-ready/background").is_file():
+        last = "已完成"
+    rows.append(("后台准备", last))
 
     for label, text in rows:
         print(f"{label}\t{text}")

@@ -147,17 +147,44 @@ def test_bundle_installs_one_h3_plugin_with_both_nodes_and_the_tunnel(tmp_path: 
     h3 = [plugin for plugin in bundle.plugins if plugin.plugin_id == "minimax_h3"]
     assert len(h3) == 1
     assert h3[0].recipes["minimax_h3.ref2va"].nodes == ("windows", "colab")
+    for plugin in bundle.plugins:
+        if plugin.plugin_id in {
+            "minimax_h3",
+            "breeze_tts2",
+            "seedvr2_7b_sharp_fp8",
+            "stable_audio_3",
+            "yue2",
+            "qwen_image",
+            "indextts2",
+        }:
+            assert plugin.manifest.default_settings()["node"] == "windows"
+            assert all(router.nodes == ("windows", "colab") for router in plugin.recipes.values())
     assert any(isinstance(service, ColabTunnelService) for service in bundle.services)
 
 
-def test_colab_only_bundle_installs_gpu_plugins_tunnel_and_lease(tmp_path: Path) -> None:
+def test_colab_only_bundle_installs_all_model_capabilities(tmp_path: Path) -> None:
     settings = {"SLATEHAND_COLAB_SESSION": "slate", "SLATEHAND_AUTOSTART_MAC_PROVIDER": "0"}
     bundle = create_bundle(
         BundleContext(_provider(tmp_path, settings, windows=False), tmp_path / "runtime")
     )
     plugins = {plugin.plugin_id: plugin for plugin in bundle.plugins}
-    assert plugins["minimax_h3"].recipes["minimax_h3.fl2va"].nodes == ("colab",)
-    assert plugins["breeze_tts2"].recipes["breeze_tts2.clone"].nodes == ("colab",)
+    for plugin_id in (
+        "minimax_h3",
+        "breeze_tts2",
+        "whisper_asr",
+        "seedvr2_7b_sharp_fp8",
+        "stable_audio_3",
+        "yue2",
+        "qwen_image",
+        "indextts2",
+    ):
+        plugin = plugins[plugin_id]
+        assert plugin.manifest.default_settings()["node"] == "colab"
+        assert all(router.nodes == ("colab",) for router in plugin.recipes.values())
+    assert all(
+        router.nodes == ("mac", "colab") for router in plugins["demucs_audio"].recipes.values()
+    )
+    assert plugins["minimax_h3"].manifest.default_settings()["preset"] == "turbo_v2"
     assert [type(service) for service in bundle.services] == [ColabTunnelService]
 
 

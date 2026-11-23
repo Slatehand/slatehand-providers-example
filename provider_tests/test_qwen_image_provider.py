@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 
 import pytest
 from core.model_providers.boundary import (
@@ -287,7 +288,9 @@ def test_fixed_graph_maps_images_in_order_and_uses_custom_canvas() -> None:
         "simple",
         3.0,
     )
-    assert workflow["1"]["inputs"]["unet_name"] == "qwen\\NoctQ_V4_int8_convrot.safetensors"
+    assert workflow["1"]["inputs"]["unet_name"] == os.path.join(
+        "qwen", "NoctQ_V4_int8_convrot.safetensors"
+    )
     workflow["99"] = {"class_type": "LoraLoader", "inputs": {}}
     with pytest.raises(ValueError, match="类型不受允许"):
         validate_qwen_workflow(workflow)

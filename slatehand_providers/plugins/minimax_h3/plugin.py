@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 
 from core.model_providers.http import HttpTransport
@@ -13,7 +14,7 @@ from core.model_providers.registry import PluginInstance
 
 from slatehand_providers.plugins.minimax_h3.fl2va import MiniMaxH3FL2VAProvider
 from slatehand_providers.plugins.minimax_h3.ref2va import MiniMaxH3Ref2VAProvider
-from slatehand_providers.plugins.nodes import DEFAULT_NODE, NodeRouter
+from slatehand_providers.plugins.nodes import DEFAULT_NODE, NodeRouter, manifest_for_nodes
 
 from .manifest import MANIFEST
 from .prompt_context import format_prompt_workset, prompt_skills
@@ -48,8 +49,17 @@ def plugin_instance(
             node[1],
         )
 
+    manifest = manifest_for_nodes(MANIFEST, tuple(all_nodes))
+    if DEFAULT_NODE not in all_nodes:
+        manifest = replace(
+            manifest,
+            settings=tuple(
+                replace(field, default="turbo_v2") if field.key == "preset" else field
+                for field in manifest.settings
+            ),
+        )
     return PluginInstance(
-        MANIFEST,
+        manifest,
         endpoint=next(iter(all_nodes.values()))[0],
         prompt_formatter=format_prompt_workset,
         prompt_skills=prompt_skills,

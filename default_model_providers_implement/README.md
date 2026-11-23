@@ -21,7 +21,7 @@ Windows（LAN）
     └── WSL eth0 地址:7860（仅本机 NAT 网段可达，仅在 Breeze 任务期间存在）
 ```
 
-Windows 与 Mac 服务显式启用不同能力。禁用能力的路由返回 404；Core 不能根据相同 server 实现推断
+Windows、Mac 与 Colab 服务各自显式启用模型能力。禁用能力的路由返回 404；Core 不能根据相同 server 实现推断
 这些 API 存在公共任务层。
 
 Windows 服务内部只有一个 `exclusive_gpu` 执行槽。当前模型族完成任务后继续驻留；相邻同族任务复用
@@ -84,14 +84,16 @@ LAN 模式仍强制 Bearer Token。
 
 ### Colab 节点
 
-同一服务也可以在 Colab VM（Linux）上只启用 `h3_fl2va,h3_ref2va,breeze_tts_2`：`colab/setup.sh` 安装与 Windows
-相同 revision 的 ComfyUI / comfyui-SelfLift 和 `sageattention==1.0.6`（保留 Colab 自带的 CUDA 版 torch），从固定 commit
-的 Hugging Face 仓库多连接下载权重到本地盘，并按 Windows 节点相同的相对路径链接进 `ComfyUI/models`；Breeze TTS 2 使用上游
-`breezeblue-ai/breeze-tts` 固定 revision 与独立的 Python 3.12 venv（依赖按其 `requirements.txt`），worker 在 Linux
-上直接以独立进程组启动 `breeze_infer.api --fast-all`，不经 WSL。`colab/run_server.sh` 以独立进程组在
-`127.0.0.1:8791` 启动服务，Token 来自 `/root/.slatehand-colab-token`。固定图里带子目录的模型名按宿主系统的
-路径分隔符生成，Windows 与 Linux 共用同一份 `comfy_core`。Colab 节点不启用控制租约；VM 由人用
-`scripts/colab_node.sh` 手动开关。
+Colab VM 在 `127.0.0.1:8791` 启动同一个模型服务，启用 H3、Breeze TTS 2、IndexTTS2.5、SeedVR2、
+Qwen Image、YuE2、Stable Audio 3、Demucs 与 Whisper。H3 / Qwen Image 共用固定 revision 的 ComfyUI，
+其余 GPU 模型使用各自的 Python 环境，通过 `exclusive_gpu` 串行运行。IndexTTS2.5 是驻留 worker，
+Stable Audio 3 和 YuE2 是一次性 worker，Breeze 在运行首个任务时启动本机 API。Whisper 经已认证的
+`/whisper/transcriptions` 同步接收 WAV 与语言，在 CPU 调用固定的 whisper.cpp CLI。
+
+`colab/setup.sh` 前台准备 H3 Turbo V2 及共用权重，后台先安装其余能力，再按顺序下载 H3 可选的 Hybrid V2 和
+官方 Pruned BF16。阶段失败时保留已经下载的完整权重，`up` 可继续准备。VM 随节点回收清理本地安装与缓存。
+`colab/run_server.sh` 从 `/root/.slatehand-colab-token` 读取 Bearer Token。VM 由人用
+`scripts/colab_node.sh` 开关，Colab 服务不使用控制租约。
 
 H3 两个提交接口可携带 `submission_id`（32 位小写十六进制）。任务 ID 等于该标识；服务按去掉标识后的规范化
 JSON 计算 SHA-256，在同一临界区内查重与创建。相同标识、模型路由与摘要返回原任务，不重复排队；同标识不同

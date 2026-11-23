@@ -19,8 +19,8 @@
 
 - 上游实现：https://github.com/itontonpi/seedvr2
 - 上游许可证：Apache License 2.0
-- 权重镜像：https://www.modelscope.cn/models/numz/SeedVR2_comfyUI
-- 使用范围：私有 Windows 默认模型服务的外部运行时
+- 权重镜像：https://www.modelscope.cn/models/numz/SeedVR2_comfyUI 、https://huggingface.co/numz/SeedVR2_comfyUI
+- 使用范围：私有 Windows 与 Colab 模型服务的外部运行时
 
 本仓库不包含 SeedVR2 上游源码或模型权重，只包含独立编写的模型级 HTTP 插件、严格请求构造和
 常驻 worker 启动适配。部署者仍须分别遵守上游实现与模型权重页面声明的许可证和使用条件。
@@ -31,7 +31,7 @@
 - 上游许可证：代码 Apache License 2.0；`m-a-p/YuE2-3B` 与 `m-a-p/YuE2-Vae` 权重为 CC BY-NC 4.0 附加创作者许可
   （见权重仓库 `LICENSE`）
 - 权重镜像：https://www.modelscope.cn/models/m-a-p/YuE2-3B 、https://www.modelscope.cn/models/m-a-p/YuE2-Vae
-- 使用范围：私有 Windows 默认模型服务的外部运行时，仅 Playground 歌曲生成
+- 使用范围：私有 Windows 与 Colab 模型服务的外部运行时，仅 Playground 歌曲生成
 
 本仓库不包含 YuE2 上游源码、推理包或模型权重，只包含独立编写的模型级 HTTP 插件、严格请求构造和
 一次性 worker 启动适配。部署者仍须遵守权重许可证的非商用与署名条件。
@@ -56,13 +56,13 @@
 `abc_tools.py`、`compile_score.py`、`common.py`、`instrumentalize.py` 按字节原样保留，未修改；只由私有模型服务的
 `yue2_worker.py` 在纯音乐请求中调用 `convert_score`。同目录 `README.md` 由 Slatehand 编写。
 
-## whisper.cpp 本机 ASR 依赖
+## whisper.cpp ASR 依赖
 
 - 上游实现：https://github.com/ggml-org/whisper.cpp
 - 上游许可证：MIT License
 - 默认模型：`ggml-large-v3-turbo-q5_0.bin`
 - 模型来源：https://huggingface.co/ggerganov/whisper.cpp
-- 使用范围：本机 Apple Silicon Reference Voice 中英文转写服务
+- 使用范围：Mac 和 Colab 的 Reference Voice 中英文转写服务
 
 本仓库不包含 whisper.cpp 源码、二进制或模型权重，只包含独立 HTTP Provider adapter、
 人类 UI 触发入口与启动配置。识别文字是可编辑候选，不作为未经确认的项目事实。
@@ -79,10 +79,21 @@
 
 两个模板按字节原样引入，Slatehand 的适配规则写在同目录 `SKILL.md`，不修改原文；协议全文与上游要求的
 版权声明见 `slatehand_providers/plugins/qwen_image/skills/qwen-image-prompt-writing/` 下的 `LICENSE` 与 `NOTICE`。
-这两个模板只可用于非商业用途，商用须另行取得 Qwen 授权。私有 Windows 服务使用的 NoctQ V4
+这两个模板只可用于非商业用途，商用须另行取得 Qwen 授权。Windows 与 Colab 服务使用的 NoctQ V4
 （`NoctQ_V4_int8_convrot.safetensors`）是 Qwen Image 2.1 的 Civitai 社区微调权重，本仓库不包含
-任何 Qwen 权重。
+任何 Qwen 权重。Colab 从 https://huggingface.co/Noctaluna/Noct-Q-Uncensored-Qwen-Image-2.1 与
+https://huggingface.co/Comfy-Org/Qwen-Image-2.1 下载固定版本。
 
 Slatehand 独立编写的适配层将参考图写作规则统一到全局 `slatehand-image-prompt-writing`：
 逐图说明用途、正文显式引用插件标签、引用说明不含文件名；Qwen 专用层保留 `<imageN>`、单图“图片”与画幅约定。
 上述调整不修改两个上游模板原文或许可证。
+
+## Colab 额外运行时
+
+- IndexTTS2.5：https://github.com/index-tts/index-tts 与 https://huggingface.co/IndexTeam/IndexTTS-2.5 。
+  运行时依赖 w2v-bert-2.0、CAMPPlus 和 BigVGAN。模型来源和固定版本见 Colab 安装脚本。
+- Stable Audio 3：https://github.com/Stability-AI/stable-audio-3 与 https://huggingface.co/stabilityai/stable-audio-3-medium 。
+  Medium 权重由 Hugging Face 根据 Stability AI Community License 授权下载。
+- Demucs：https://github.com/facebookresearch/demucs ，MIT License，使用上游发布的 htdemucs 权重。
+
+这些依赖在部署时从各上游安装，本仓库分发安装与调用代码。

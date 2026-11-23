@@ -11,7 +11,7 @@ from pathlib import Path
 from core.model_providers.http import HttpTransport
 from core.model_providers.registry import PluginInstance
 
-from slatehand_providers.plugins.nodes import DEFAULT_NODE, NodeRouter
+from slatehand_providers.plugins.nodes import DEFAULT_NODE, NodeRouter, manifest_for_nodes
 
 from .manifest import MANIFEST
 from .provider import BreezeTTS2Provider
@@ -41,7 +41,7 @@ def plugin_instance(
         },
     )
     return PluginInstance(
-        MANIFEST,
+        manifest_for_nodes(MANIFEST, tuple(all_nodes)),
         recipes={"breeze_tts2.voice_design": router, "breeze_tts2.clone": router},
         endpoint=next(iter(all_nodes.values()))[0],
     )
