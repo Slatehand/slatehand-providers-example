@@ -115,8 +115,7 @@ main() {
         echo "已生成 ${TOKEN}。"
       fi
       if ! session_running; then
-        echo "==> 创建 Colab G4 会话 ${SESSION}"
-        "$COLAB" new -s "$SESSION" --gpu G4
+        python3 "$REPO/scripts/colab_allocate.py" "$COLAB" "$SESSION" || exit "$?"
       fi
       echo "==> 同步代码与 Token"
       if [ -s "$HF_TOKEN_FILE" ]; then

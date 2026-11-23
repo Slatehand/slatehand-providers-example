@@ -158,6 +158,8 @@ Colab G4。异步任务的查询、取消和产物读取仍按句柄回到提交
 - 开关节点由人手动管理，用 `scripts/colab_node.sh`（需要已安装并登录
   [Colab CLI](https://github.com/googlecolab/google-colab-cli)）。`up` 依次开 G4、同步本仓库 `default_model_providers_implement/` 与 Token，再在 VM 上运行 `colab/setup.sh` 与
   `colab/run_server.sh start`，最后进入状态面板；代码未变化且服务在运行时跳过部署与重启，不打断运行中的任务。
+  新建 G4 会话最多等待 1 小时，每分钟显示排队进度，随时可按 Ctrl-C 取消等待。若取消时 Colab 恰好分配成功，
+  可用 `colab sessions` 查看会话。
   检查部署或启动服务时，若 Colab CLI 未返回远程命令结果，`up` 会重连当前会话，最多重试两次。
   `status` 打印一次、`watch` 持续刷新状态面板（`colab/node_status.py` 汇报模型服务、GPU 显存与利用率、各权重
   是否就绪、任务数与后台下载进度，本机补充 Core 隧道是否连通）；`down` 回收 VM。Core 不启停 VM、不对 Colab 维持租约。
