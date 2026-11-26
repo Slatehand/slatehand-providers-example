@@ -108,3 +108,9 @@ Slatehand 独立编写的适配层将参考图写作规则统一到全局 `slate
 - 部署依赖包含 SigLIP2 与 CLAP 编码器，固定版本见 Colab 安装脚本。
 
 上游实现和权重由 Windows WSL 与 Colab 部署环境读取。本仓库分发独立编写的 HTTP 插件和推理适配代码。
+
+## MiniMax H3 Weapon Combat LoRA V1
+
+模型作者为 JOKER141，权重以原始文件按需下载，仓库分发独立编写的适配代码与提示词指导。
+固定版本 `5979d9fac7937fd2f5204e1613fa508253d856e5`。模型卡列出的许可证为 MiniMax H3 Community License Agreement。
+[上游模型卡、作者示例与使用建议](https://huggingface.co/JOKER141/MiniMax-H3-Weapon-Combat-LoRA/tree/5979d9fac7937fd2f5204e1613fa508253d856e5) · [协议全文](slatehand_providers/plugins/minimax_h3/skills/h3-prompt-writing/LICENSE)

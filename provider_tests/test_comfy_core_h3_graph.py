@@ -11,6 +11,7 @@ from default_model_providers_implement.comfy_core.graph import (
     LATENT_UPSCALER,
     SAMPLER_NODE_ID,
     SAVE_NODE_ID,
+    WEAPON_COMBAT_LORA,
     H3GraphInputs,
     build_h3_workflow,
     validate_workflow,
@@ -111,6 +112,26 @@ class ComfyCoreH3GraphTests(unittest.TestCase):
                 self.assertEqual(types["17"], "VAEDecodeAudio")
                 self.assertEqual(workflow["15"]["inputs"]["fps"], 24)
                 self.assertEqual(types[SAVE_NODE_ID], "SaveVideo")
+
+    def test_weapon_combat_adds_only_a_model_patch(self) -> None:
+        for mode, selflift in itertools.product(("fl2va", "ref2va"), (True, False)):
+            plain = build_h3_workflow(_inputs(mode, 8, True, selflift))
+            patched = build_h3_workflow(_inputs(mode, 8, True, selflift, weapon_combat=True))
+            loader_id, output = patched["4"]["inputs"]["model"]
+            self.assertEqual(output, 0)
+            self.assertEqual(
+                patched.pop(loader_id),
+                {
+                    "class_type": "LoraLoaderModelOnly",
+                    "inputs": {
+                        "model": ["3", 0],
+                        "lora_name": WEAPON_COMBAT_LORA,
+                        "strength_model": 0.45,
+                    },
+                },
+            )
+            patched["4"]["inputs"]["model"] = ["3", 0]
+            self.assertEqual(patched, plain)
 
     def test_official_pruned_bf16_uses_one_checkpoint_per_mode(self) -> None:
         names = {

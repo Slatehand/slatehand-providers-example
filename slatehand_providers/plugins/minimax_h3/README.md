@@ -65,3 +65,7 @@ H3 服务只输出 24fps 下 17k+5 帧，请求时长向上取到这个网格且
 - 镜头：描述段从 `[Shot 1]` 起连续编号，后续镜头紧跟递增且早于视频结束的 `At MM:SS.mmm`。
 
 无对白且不使用官方段名的自由正文只做 `<d>`、说话者与标签检查。
+
+两个视频 recipe 共用可选布尔参数 `weapon_combat`，按 Segment 的 recipe 分别保存。专项开启时模型服务使用
+Bunny Weapon Combat V1，强度 0.45。Agent 根据本段内容按插件 Skill 决定取值并编写触发词；旧请求省略此键时按关闭处理。
+作者建议在 DaSiWa 混合模型上从较低强度开始。这里沿用 SlateHand 的采样器与 SelfLift，专项只加载这一款动作 LoRA。

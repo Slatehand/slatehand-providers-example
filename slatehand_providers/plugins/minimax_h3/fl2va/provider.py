@@ -49,9 +49,12 @@ class MiniMaxH3FL2VARequest:
     sage_attention: bool = True
     selflift: bool = True
     base_model: str | None = None
+    weapon_combat: bool = False
 
     def __post_init__(self) -> None:
         default_base_model(self)
+        if not isinstance(self.weapon_combat, bool):
+            raise ValueError("H3 weapon_combat 必须是布尔值。")
         if self.first_frame is None and self.last_frame is None:
             raise ValueError("H3 FL2VA 至少需要首帧或尾帧之一。")
         _validate_h3_fields(self)
@@ -76,6 +79,7 @@ def to_request(contract: FL2VARequest) -> MiniMaxH3FL2VARequest:
         contract.sage_attention,
         contract.selflift,
         contract.base_model,
+        contract.weapon_combat,
     )
 
 
@@ -101,6 +105,7 @@ class MiniMaxH3FL2VAProvider:
             "sampling": {
                 "steps": request.steps,
                 "base_model": request.base_model,
+                **({"weapon_combat": True} if request.weapon_combat else {}),
                 "cfg": request.cfg,
                 "sage_attention": request.sage_attention,
                 "selflift": request.selflift,

@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from default_model_providers_implement.comfy_core import (
     BUILTIN_NODE_FILES,
     REQUIRED_NODE_TYPES,
     resolve_saved_video,
+    weapon_combat,
 )
 from default_model_providers_implement.comfy_core.runtime import (
     CUSTOM_NODE_PACKAGES,
@@ -204,3 +209,18 @@ class ComfyCoreH3RuntimeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_weapon_weight_is_verified_and_installed_atomically(tmp_path, monkeypatch):
+    sample = b"verified model"
+    monkeypatch.setattr(weapon_combat, "_SHA256", hashlib.sha256(sample).hexdigest())
+    monkeypatch.setattr(weapon_combat, "_SIZE", len(sample))
+    target = tmp_path / "loras" / "weight.safetensors"
+    downloads = iter((b"x" * len(sample), sample))
+    monkeypatch.setattr(weapon_combat, "urlopen", lambda *a, **kw: io.BytesIO(next(downloads)))
+    with pytest.raises(ValueError, match="校验失败"):
+        weapon_combat.ensure_weight(target)
+    assert list(target.parent.iterdir()) == []
+    weapon_combat.ensure_weight(target)
+    weapon_combat.ensure_weight(target)
+    assert target.read_bytes() == sample

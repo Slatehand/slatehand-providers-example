@@ -52,8 +52,16 @@ Read `references/ref-en.txt` for label rules, retention analysis, and complete e
 - `additional_images`：最多 9 张图片，提交前 Core 校验与实际使用的首尾帧合计不超过 9 张（角色造型设定图、同场锚点关键帧或用户显式选择的地点/道具图）；说明写明它定义的主体或环境。绑定角色造型设定图时，**不为该 `<Picture K>` 单独写时间帧定义行**，而是在 `subject_definitions` 的 `<Subject N>` 行内引用它，明确只提取人物面部五官、发型、体型与全身服装造型，**忽略设定图的浅灰背景与多视角排版**（若是首帧局部拉全身，合并两个来源写明：起势局部状态来自首帧 `<Picture 1>`，拉远/转正后露出的面部与全身服装来自 `<Picture K>`）；`summary` 的任务类型包含 `reference generation`（有边界帧时写 `[keyframe completion + reference generation]`，含对白音频再加 `+ audio reuse`）。
 - `reference_audios`：最多 3 条 WAV（官方 ComfyUI 节点上限）；对白超过 3 句的 Segment 需拆分，或由用户决定只绑定其中几句。已选对白 TTS 按剧本顺序占用前面的 Audio 标签；其余名额才用于用户显式添加的音色、环境声或原声参考。系统对白音频来自 DialoguePlan，不从角色卡参考音色直接推导。
 - `reference_videos`：最多 3 条 2–15 秒 MP4，只参考画面；说明运镜、节奏或动作用途。
-- 每项说明必填且 Asset 不重复；Ref2VA 可无图片，但五类媒体槽至少一项；`params` 传 `{}`。
+- 每项说明必填且 Asset 不重复；Ref2VA 可无图片，但五类媒体槽至少一项；保留其它机制参数。
 - 绑定变化后正文要引用新标签时，以保存回执 `data.asset_inputs` 或重读工作集的 `actual_provider_inputs` 标签写正文，并确认 `unanchored_characters` 清零。
+
+## 写实冷兵器交锋
+
+每段先看脚本、实际参考图和当前 recipe 的设置摘要。已验证的运行配置为 Colab、DaSiWa Turbo V2、720p、8 步、SelfLift 开启，沿用现有注意力设置。中近景双人写实交锋中，如果道具清楚可见，且镜头重点是连续的运动、交锋后的分离和双方站位，在 FL2VA 或 Ref2VA 保存正文的同时提交 `recipe_inputs.params.weapon_combat=true`，并在画面描述中写一次独立触发词 `BUNNY`。FL2VA 写入 `integrated_multimodal_description`，Ref2VA 写入 `detailed_description`。正常沿用原有时间轴、输入标签与声音段落，用户指定的取值优先。
+
+道具很小的远景、静态持剑、对白、兵器陈列及普通运动沿用关闭状态。重新编写已启用的段落时，若交锋已删去，将该键设回 `false` 并移除专项触发词。省略参数会保留该段旧值。其它基座或采样组合保持现有设置，由单独的对照出片验证适配。
+
+镜头里明确两人的初始画面位置、一次可见的道具接触或错开，以及动作结束时的画面关系。给运动留出足够的画幅和时间。示例：“BUNNY。固定全景，银甲演员在左、深色披风演员在右；两件道具在两人之间短暂相交，随后分开，湿石面上能看清两人各自停下的位置。”维持剧本指定的运镜和节奏。多人遮挡、握持、道具变形与快速运动中的穿插仍需看片审核。
 
 ## Slatehand 对白写法
 

@@ -36,6 +36,14 @@ _PARAMS = (
     Field(
         "duration_seconds", Widget.NUMBER, "时长（秒）", default=6, minimum=0.2, role=Role.DURATION
     ),
+    Field(
+        "weapon_combat",
+        Widget.TOGGLE,
+        "冷兵器交锋 LoRA",
+        default=False,
+        default_when_omitted=True,
+        help="写实双人冷兵器交锋时按段选用，画面描述使用 BUNNY。默认关闭。",
+    ),
     seed_field(),
     aspect_ratio_field(),
 )

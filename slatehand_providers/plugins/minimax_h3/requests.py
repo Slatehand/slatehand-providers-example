@@ -28,6 +28,7 @@ def to_request(request: RecipeRequest):
         sage_attention=render.sage_attention,
         selflift=render.selflift,
         base_model=render.base_model,
+        weapon_combat=request.param("weapon_combat"),
     )
     if request.recipe_id == "minimax_h3.fl2va":
         return FL2VARequest(

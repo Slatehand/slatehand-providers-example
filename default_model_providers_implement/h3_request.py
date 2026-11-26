@@ -42,6 +42,7 @@ class Request:
     reference_audios: tuple[Path, ...]
     reference_videos: tuple[Path, ...]
     output_path: Path
+    weapon_combat: bool = False
 
 
 def parse_request(path: Path) -> Request:
@@ -71,7 +72,7 @@ def parse_request(path: Path) -> Request:
         "reference_audios",
         "reference_videos",
     }
-    if not isinstance(data, dict) or set(data) != expected:
+    if not isinstance(data, dict) or set(data) - {"weapon_combat"} != expected:
         raise ValueError("H3 内部请求字段不符合固定 schema。")
     if data["schema"] != SCHEMA or data["mode"] not in MODES:
         raise ValueError("H3 内部请求版本或 mode 不受支持。")
@@ -108,7 +109,8 @@ def parse_request(path: Path) -> Request:
         raise ValueError("H3 base_model 不受支持或与 steps 不匹配。")
     if isinstance(cfg, bool) or not isinstance(cfg, (int, float)) or not 0 <= cfg <= 30:
         raise ValueError("H3 cfg 不合法。")
-    for flag in ("save_audio", "sage_attention", "selflift"):
+    data.setdefault("weapon_combat", False)
+    for flag in ("save_audio", "sage_attention", "selflift", "weapon_combat"):
         if not isinstance(data[flag], bool):
             raise ValueError(f"H3 {flag} 不合法。")
     first = _task_file(task_dir, data["first_image"])
@@ -157,6 +159,7 @@ def parse_request(path: Path) -> Request:
         cfg=float(cfg),
         sage_attention=data["sage_attention"],
         selflift=data["selflift"],
+        weapon_combat=data["weapon_combat"],
         save_audio=data["save_audio"],
         first_image=first,
         last_image=last,

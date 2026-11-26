@@ -47,9 +47,10 @@
 - `request_builders.py`：各路由请求校验与任务目录写入。
 - `strict_json.py`：严格 JSON 字段解析。
 - `sampling_progress.py`：采样步速与剩余时间估算。
-- `h3_request.py`：H3 runtime 内部请求 v6 的严格解析（任务目录内文件、基础模型与配套 20/8 步、Sage/SelfLift 开关、32 网格画布、17k+5 帧）。
+- `h3_request.py`：H3 runtime 内部请求 v6 的严格解析（任务目录内文件、基础模型与配套 20/8 步、Sage/SelfLift 和冷兵器专项开关、32 网格画布、17k+5 帧）。
 - `comfy_core/README.md`、`comfy_core/runtime.py`、`comfy_core/worker.py`：固定图 Comfy Core 运行时（通用初始化与 H3 FL2VA/Ref2VA 执行）与 JSONL 入口（H3 或 Qwen Image）。
-- `comfy_core/graph.py`：按 mode → 步数/权重 → 注意力 → SelfLift 现场构造并校验 H3 节点图。
+- `comfy_core/graph.py`：按 mode → 步数/权重 → 可选 LoRA → 注意力 → SelfLift 现场构造并校验 H3 节点图。
+- `comfy_core/weapon_combat.py` 在专项首次启用时下载、校验并安装固定版本的 LoRA。
 - `comfy_core/qwen_image.py`：Qwen Image 2.1（NoctQ V4）固定节点图、进度映射与 Comfy Core 执行。
 - `qwen_image_request.py`：Qwen Image runtime 内部请求的严格解析（任务目录内图片、32 网格画布）。
 - `indextts2_worker.py`：IndexTTS2.5 独立 WSL JSONL worker，中英语言、语速与八维情感。

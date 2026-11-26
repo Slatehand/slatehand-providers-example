@@ -113,7 +113,7 @@ JSON 计算 SHA-256，在同一临界区内查重与创建。相同标识、模�
 - 部署固定：ComfyUI revision `a7169322`、`comfyui-SelfLift` revision `835c3cf7`，由安装脚本预检；
   Python 由管理员通过 `SLATEHAND_H3_PYTHON` 固定；
 - 组合项：请求（内部 v6）只能选择 mode（FL2VA/Ref2VA）、`base_model` 与配套 `steps`、`sage_attention`、
-  `selflift` 和画布；决策顺序为 mode → 基础模型/步数/权重 → 注意力 → SelfLift：
+  `selflift`、可选的 `weapon_combat` 和画布；决策顺序为 mode → 基础模型/步数/权重 → 注意力 → SelfLift：
   - `dasiwa_hybrid_v2`（20 步）：`DasiwaMinimaxH3_dasiwaHybridV2_int8`；单阶段 `res_multistep`，SelfLift 时
     `euler` 10+10；
   - `dasiwa_turbo_v2`（8 步）：`DasiwaMinimaxH3_dasiwaHybridTurboV2_int8`（独立权重，不叠加 Turbo LoRA）；
@@ -122,8 +122,9 @@ JSON 计算 SHA-256，在同一临界区内查重与创建。相同标识、模�
     20 步，与官方模板一致（`BasicGuider`、`res_multistep`/`simple`、无 shift）。只部署在 Colab 节点；节点缺少
     所选权重时任务直接失败并说明，不回退到其它权重；
   - 各基础模型共用 NVFP4 Qwen3-VL 文本编码器、独立视频/音频 VAE，不再有 SigmaShift；
-  - `ModelAttentionBackend` 选 `sage attention` 或 `default attention`。Sage 不可用（未安装或 Triton 缓存
-    不可写）时任务直接失败并说明原因，不回退到默认注意力，也不标成 Sage 成功；
+  - `ModelAttentionBackend` 收到 `sage attention` 或 `default attention`。请求 Sage 时先检查库与 Triton 缓存。
+    Colab 固定 Comfy revision 的此节点只识别 PyTorch 和 Comfy Kitchen 两个选项，传入上述名称时会记录警告并使用 PyTorch。
+    完成摘要里的注意力项表示请求值，核对实际后端需看节点实现与日志；
   - SelfLift 固定 `cfg=1`、`lowres_scale=0.5`、`rho=0`、`w_min=0.5`、`w_max=1`、
     `minimax_h3_latent_upscaler_3d_conv_v1_fp16`、不分块、放大后卸载；关闭时图中不保留放大器节点；
 - 画布：必须落在 32 像素网格（16 倍潜变量下采样后还要 2×2 patchify；FL2VA+SelfLift 在

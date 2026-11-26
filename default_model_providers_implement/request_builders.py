@@ -166,7 +166,9 @@ def prepare_h3_fl2va(payload: Any):
     )
     canvas = object_fields(data["canvas"], required={"width", "height"})
     sampling = object_fields(
-        data["sampling"], required={"steps", "base_model", "cfg", "sage_attention", "selflift"}
+        data["sampling"],
+        required={"steps", "base_model", "cfg", "sage_attention", "selflift"},
+        optional={"weapon_combat"},
     )
     common = _h3_common(
         prompt=data["prompt"],
@@ -178,6 +180,7 @@ def prepare_h3_fl2va(payload: Any):
         base_model=sampling["base_model"],
         cfg=sampling["cfg"],
         sage_attention=sampling["sage_attention"],
+        weapon_combat=sampling.get("weapon_combat", False),
         selflift=sampling["selflift"],
         save_audio=data["include_audio"],
     )
@@ -225,6 +228,7 @@ def prepare_h3_ref2va(payload: Any):
             "audio_references",
             "video_references",
         },
+        optional={"weapon_combat"},
     )
     common = _h3_common(
         prompt=data["direction"],
@@ -236,6 +240,7 @@ def prepare_h3_ref2va(payload: Any):
         base_model=data["base_model"],
         cfg=data["guidance"],
         sage_attention=data["sage_attention"],
+        weapon_combat=data.get("weapon_combat", False),
         selflift=data["selflift"],
         save_audio=data["audio"],
     )
@@ -560,6 +565,7 @@ def _h3_common(
     base_model: Any,
     cfg: Any,
     sage_attention: Any,
+    weapon_combat: Any,
     selflift: Any,
     save_audio: Any,
 ) -> dict[str, Any]:
@@ -584,6 +590,7 @@ def _h3_common(
         "cfg": number(cfg, "cfg", minimum=0, maximum=30),
         "sage_attention": boolean(sage_attention, "sage_attention"),
         "selflift": boolean(selflift, "selflift"),
+        **({"weapon_combat": True} if boolean(weapon_combat, "weapon_combat") else {}),
         "save_audio": boolean(save_audio, "save_audio"),
     }
 

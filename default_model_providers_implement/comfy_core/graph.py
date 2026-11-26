@@ -1,6 +1,6 @@
 """按 mode → steps/权重 → 注意力 → SelfLift 现场构造 H3 固定节点图。
 
-模型名、采样器与 SelfLift 参数由部署端固定；请求只能选择 mode、20/8 步、Sage 开关与 SelfLift 开关，
+模型名、LoRA 强度、采样器与 SelfLift 参数由部署端固定；请求只选择已声明的预设与开关，
 不能提交任意节点、模型路径或输出路径。
 """
 
@@ -51,6 +51,8 @@ SELFLIFT_FIXED_INPUTS = {
     "highres_tiling": False,
     "upscaler_unload": True,
 }
+WEAPON_COMBAT_LORA = _subdir("Bunny_weapon_combatV1.safetensors")
+WEAPON_COMBAT_STRENGTH = 0.45
 FPS = 24
 
 GRAPH_NODE_TYPES = frozenset(
@@ -64,6 +66,7 @@ GRAPH_NODE_TYPES = frozenset(
         "LoadAudio",
         "LoadImage",
         "LoadVideo",
+        "LoraLoaderModelOnly",
         "MiniMaxH3ImageToVideo",
         "MiniMaxH3ReferenceToVideo",
         "ModelAttentionBackend",
@@ -98,6 +101,7 @@ class H3GraphInputs:
     reference_audios: tuple[str, ...] = ()
     reference_videos: tuple[str, ...] = ()
     include_audio: bool = True
+    weapon_combat: bool = False
 
     def __post_init__(self) -> None:
         if self.mode not in {"fl2va", "ref2va"}:
@@ -199,6 +203,16 @@ def build_h3_workflow(inputs: H3GraphInputs) -> dict[str, Any]:
             },
         },
     }
+    if inputs.weapon_combat:
+        workflow["60"] = {
+            "class_type": "LoraLoaderModelOnly",
+            "inputs": {
+                "model": ["3", 0],
+                "lora_name": WEAPON_COMBAT_LORA,
+                "strength_model": WEAPON_COMBAT_STRENGTH,
+            },
+        }
+        workflow["4"]["inputs"]["model"] = ["60", 0]
     if inputs.mode == "ref2va" or inputs.include_audio:
         workflow["16"] = {"class_type": "VAELoader", "inputs": {"vae_name": AUDIO_VAE}}
     if inputs.mode == "fl2va":

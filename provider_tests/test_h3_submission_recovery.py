@@ -14,6 +14,7 @@ from core.model_providers.recipe import MediaInput, build_recipe_request
 from media_samples import png_bytes
 
 from default_model_providers_implement import server as api
+from default_model_providers_implement.h3_request import parse_request
 from default_model_providers_implement.task_store import TaskStore
 from slatehand_providers.plugins.minimax_h3 import MANIFEST
 from slatehand_providers.plugins.minimax_h3.plugin import plugin_instance
@@ -67,7 +68,7 @@ def router(endpoint, directory, mode="ref2va", transport=None):
     ).recipes["minimax_h3." + mode]
 
 
-def request(mode="ref2va"):
+def request(mode="ref2va", **params):
     inputs = {"first_frame": (MediaInput("image/png", png_bytes("submission")),)}
     return build_recipe_request(
         MANIFEST,
@@ -78,6 +79,7 @@ def request(mode="ref2va"):
             "duration_seconds": 0.2,
             "seed": 7,
             "aspect_ratio": "16:9",
+            **params,
         },
         settings={**MANIFEST.default_settings(), "node": "colab", "preset": "turbo_v2"},
     )
@@ -331,3 +333,16 @@ def test_explicit_rejection_is_terminal_and_not_automatically_retried(node, tmp_
         assert status["error"] == "submission_rejected"
     assert len([c for c in transport.calls if c[0] == "POST"]) == 1
     assert server.store.list_recoverable() == []
+
+
+@pytest.mark.parametrize("mode", ["fl2va", "ref2va"])
+@pytest.mark.parametrize("params", [{}, {"weapon_combat": True}])
+def test_weapon_combat_survives_submission_and_runtime_parse(node, tmp_path, mode, params):
+    server, endpoint = node()
+    provider = router(endpoint, tmp_path / "outbox", mode)
+    handle = provider.submit_recipe(request(mode, **params))
+    assert provider.observe(handle).phase is GenerationPhase.QUEUED
+    record = server.store.get(handle.external_id.removeprefix("colab:"))
+    path = Path(record.task_dir) / "request.json"
+    assert ("weapon_combat" in json.loads(path.read_text())) == bool(params)
+    assert parse_request(path).weapon_combat is bool(params)

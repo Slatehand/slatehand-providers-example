@@ -21,6 +21,8 @@ from .graph import (
     DIFFUSION_MODELS,
     GRAPH_NODE_TYPES,
     SAVE_NODE_ID,
+    WEAPON_COMBAT_LORA,
+    WEAPON_COMBAT_STRENGTH,
     H3GraphInputs,
     build_h3_workflow,
     sampler_name,
@@ -35,7 +37,7 @@ BUILTIN_NODE_FILES = (
 )
 # 唯一允许加载的外部 custom node；不扫描 custom_nodes 目录。
 CUSTOM_NODE_PACKAGES = ("comfyui-SelfLift",)
-REQUIRED_NODE_TYPES = GRAPH_NODE_TYPES
+REQUIRED_NODE_TYPES = GRAPH_NODE_TYPES - {"LoraLoaderModelOnly"}
 
 
 def resolve_saved_video(history: Any, output_root: Path) -> Path:
@@ -406,6 +408,14 @@ class ComfyCoreH3Runtime(ComfyCoreRuntime):
             )
         self.progress_server.reset(request_id, mode=request.mode)
 
+        if request.weapon_combat:
+            from .weapon_combat import ensure_weight
+
+            if "LoraLoaderModelOnly" not in self.nodes.NODE_CLASS_MAPPINGS:
+                raise RuntimeError("本节点缺少冷兵器交锋 LoRA 加载器。")
+            self.report(0.11, "正在准备冷兵器交锋 LoRA。")
+            ensure_weight(self.comfy_root / "models" / "loras" / WEAPON_COMBAT_LORA)
+
         relative_dir = Path("slatehand") / request_id
         staged_dir = self.input_root / relative_dir
         staged_dir.mkdir(parents=True, exist_ok=False)
@@ -461,6 +471,7 @@ class ComfyCoreH3Runtime(ComfyCoreRuntime):
                 steps=request.steps,
                 base_model=request.base_model,
                 sage_attention=request.sage_attention,
+                weapon_combat=request.weapon_combat,
                 selflift=request.selflift,
                 filename_prefix=f"slatehand/{request_id}",
                 first_image=(relative_dir / first_name).as_posix() if first_name else None,
@@ -548,7 +559,8 @@ def effective_summary(request: Request) -> str:
         f"{request.frame_count} 帧 24fps（{_format_seconds(request.frame_count)} 秒，"
         f"请求 {request.duration_seconds:g} 秒）· {DIFFUSION_LABELS[request.base_model]} · "
         f"{sampler_name(request.steps, request.selflift)} {sampling} · "
-        f"{'Sage' if request.sage_attention else '默认'}注意力"
+        f"请求{'Sage' if request.sage_attention else '默认'}注意力"
+        + (f" · Weapon Combat V1 × {WEAPON_COMBAT_STRENGTH}" if request.weapon_combat else "")
     )
 
 

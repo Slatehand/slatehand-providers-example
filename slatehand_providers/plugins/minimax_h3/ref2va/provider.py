@@ -84,9 +84,12 @@ class MiniMaxH3Ref2VARequest:
     sage_attention: bool = True
     selflift: bool = True
     base_model: str | None = None
+    weapon_combat: bool = False
 
     def __post_init__(self) -> None:
         default_base_model(self)
+        if not isinstance(self.weapon_combat, bool):
+            raise ValueError("H3 weapon_combat 必须是布尔值。")
         if not any(
             (
                 self.first_frame,
@@ -177,6 +180,7 @@ def to_request(contract: Ref2VARequest) -> MiniMaxH3Ref2VARequest:
         contract.sage_attention,
         contract.selflift,
         contract.base_model,
+        contract.weapon_combat,
     )
 
 
@@ -205,6 +209,7 @@ class MiniMaxH3Ref2VAProvider:
             "random_seed": request.seed,
             "step_count": request.steps,
             "base_model": request.base_model,
+            **({"weapon_combat": True} if request.weapon_combat else {}),
             "guidance": request.cfg,
             "sage_attention": request.sage_attention,
             "selflift": request.selflift,

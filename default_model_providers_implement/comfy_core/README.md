@@ -7,8 +7,8 @@
 
 - 不启动 HTTP、Web UI、数据库、队列或资产索引；
 - 不扫描外部 custom nodes；只加载 H3 固定图所需的 ComfyUI 内置扩展和显式列出的 `comfyui-SelfLift`；
-- 初始化时探测 SageAttention 与 Triton 缓存可写性；请求 Sage 而不可用时直接失败，不静默回退；
-- 完成事件附带实际生效参数摘要（画布、帧数、权重、采样器、注意力），由外层写进任务完成消息；
+- 初始化时探测 SageAttention 与 Triton 缓存可写性；实际注意力后端由固定版本的 `ModelAttentionBackend` 实现决定；
+- 完成事件附带执行摘要（画布、帧数、权重、采样器及请求的注意力设置），由外层写进任务完成消息；
   CUDA OOM 映射为带当前配置的明确错误，不自动降档；
 - 请求只能引用 Provider 已建立任务目录中的首尾图片和 Ref2VA 参考 WAV；模型名、节点图、输入区和
   输出区由部署端固定；
@@ -35,3 +35,7 @@ H3 与 Qwen Image 子类各自声明需要的内置节点文件与固定节点�
 `nodes_qwen.py`，按 `UNETLoader → QwenImage21Cache → KSampler`、`CLIPLoader + VAELoader → TextEncodeQwenImage21`、
 `EmptyLatentImage → KSampler → VAEDecode → SaveImage` 现场构造固定图并校验节点白名单与连线。
 `worker.py` 按 `SLATEHAND_COMFY_CORE_MODE`（`fl2va`、`ref2va` 或 `qwen_image`）选择运行时与请求解析。
+
+`weapon_combat.py` 在首次开启冷兵器交锋时从固定版本下载权重，校验长度与 SHA-256 后原子安装到
+ComfyUI 的 `models/loras/minimax-h3/`。固定图将 `LoraLoaderModelOnly` 接在原 UNet 和注意力节点之间，强度为 0.45。
+关闭时直接使用原 UNet。两个分支使用各自请求指定的基础模型、采样和 VAE 配置，完成消息记录实际启用的专项。

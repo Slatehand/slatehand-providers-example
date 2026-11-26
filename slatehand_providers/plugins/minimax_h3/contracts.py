@@ -152,9 +152,12 @@ class FL2VARequest:
     sage_attention: bool = True
     selflift: bool = True
     base_model: str | None = None
+    weapon_combat: bool = False
 
     def __post_init__(self) -> None:
         default_base_model(self)
+        if not isinstance(self.weapon_combat, bool):
+            raise ValueError("H3 weapon_combat 必须是布尔值。")
         if self.first_frame is None and self.last_frame is None:
             raise ValueError("H3 FL2VA 至少需要首帧或尾帧之一。")
         for frame in (self.first_frame, self.last_frame):
@@ -189,9 +192,12 @@ class Ref2VARequest:
     sage_attention: bool = True
     selflift: bool = True
     base_model: str | None = None
+    weapon_combat: bool = False
 
     def __post_init__(self) -> None:
         default_base_model(self)
+        if not isinstance(self.weapon_combat, bool):
+            raise ValueError("H3 weapon_combat 必须是布尔值。")
         if not any(
             (
                 self.first_frame,

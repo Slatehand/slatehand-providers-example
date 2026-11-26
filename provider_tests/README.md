@@ -34,6 +34,7 @@
 | E4b | HunyuanVideo-Foley XXL 接受 1–15 秒 MP4、音效描述与 seed，从 Playground 异步回收 WAV；未知模型参数拒绝。 | `plugins/hunyuan_foley/`、`default_model_providers_implement/hunyuan_foley_worker.py` | `test_hunyuan_foley_provider.py`、`test_h3_nodes.py` |
 | E5 | Whisper ASR 接受 WAV 与 auto/zh/en，同步返回文字。Colab 路由使用模型服务 Bearer 认证。 | `slatehand_providers/plugins/whisper_asr/`；`core/structured_director/service.py` | `test_whisper_asr_provider.py`、黄金 multipart |
 | G4 | 所有插件拒绝 plugin_id 或版本不匹配的句柄。 | 各插件 `provider.py` 的句柄校验 | `test_model_provider_contract.py`、各插件测试 |
+| H3 LoRA | FL2VA 与 Ref2VA 的专项开关经冻结请求进入运行时；默认图沿用原模型，开启时仅接入固定 LoRA。 | `minimax_h3/`、`comfy_core/` | `test_h3_submission_recovery.py`、`test_comfy_core_h3_graph.py` |
 | H3 | H3 默认优先 `minimax_h3.ref2va`；官方格式 Skill 与角色视觉锚点规范位于 `minimax_h3` 插件包。 | `slatehand_providers/plugins/minimax_h3/manifest.py`、`skills/h3-prompt-writing/` | `test_h3_prompt_skill.py`、`test_h3_prompt_writer.py`、`test_golden_provider_requests.py` |
 | J1 | 插件包安装后声明声音克隆、语速 0.5–2 与八维情感 −1–1；无 Core 领域或 Web 专用实现。 | `slatehand_providers/plugins/indextts2/` | `test_indextts2_provider.py::test_plugin_loads_playground_vector_form_and_preserves_historical_request`、`::test_narration_uses_new_plugin_without_domain_changes` |
 | J2 | 模型 HTTP 请求体、五种状态、取消、回收、句柄与响应严格校验。 | `slatehand_providers/plugins/indextts2/` | `test_indextts2_provider.py::test_observe_translates_all_phases`、`::test_invalid_observation_is_rejected`、`::test_cancel_artifact_and_handle_boundaries` |
